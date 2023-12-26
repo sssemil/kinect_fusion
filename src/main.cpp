@@ -1,5 +1,6 @@
 #include "DepthSensor.h"
 #include "FusionAlgorithm.h"
+#include "SurfaceMeasurement.h"
 
 int main() {
     DepthSensor sensor;
