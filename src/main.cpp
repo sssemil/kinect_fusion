@@ -154,7 +154,7 @@ bool WriteMesh(Vertex *vertices, unsigned int width, unsigned int height,
 
 int main() {
     // Make sure this path points to the data folder
-    std::string filenameIn = "../Data/rgbd_dataset_freiburg1_xyz/";
+    std::string filenameIn = "../../Data/rgbd_dataset_freiburg1_xyz/";
     std::string filenameBaseOut = "mesh_";
 
     // load video
