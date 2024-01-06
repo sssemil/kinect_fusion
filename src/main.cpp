@@ -6,7 +6,7 @@
 #include "VirtualSensor.h"
 #include "cxxopts.hpp"
 
-int run(const std::string& datasetPath, const std::string& filenameBaseOut) {
+int run(const std::string &datasetPath, const std::string &filenameBaseOut) {
     // load video
     std::cout << "Initialize virtual sensor..." << std::endl;
     VirtualSensor sensor;
@@ -101,17 +101,12 @@ int main(int argc, char *argv[]) {
             return 0;
         }
 
-        std::string datasetPath;
+        std::string datasetPath = "../Data/rgbd_dataset_freiburg1_xyz/";
         if (result.count("dataset")) {
             datasetPath = result["dataset"].as<std::string>();
-        } else {
-            std::cerr
-                << "Dataset path not provided. Use -d or --dataset option."
-                << std::endl;
-            return -1;
         }
 
-        std::string filenameBaseOut = "mesh_";  // Default value
+        std::string filenameBaseOut = "mesh_";
         if (result.count("output")) {
             filenameBaseOut = result["output"].as<std::string>();
         }
