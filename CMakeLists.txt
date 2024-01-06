@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 14)
 ## OpenCV Integration
 # Optional: Set OpenCV_DIR if you want to use a custom version of OpenCV
 # SET("OpenCV_DIR" "/opt/opencv/usr/local/share/OpenCV")
-find_package(OpenCV 4.8 REQUIRED)
+find_package(OpenCV 3.0 REQUIRED)
 if (OpenCV_INCLUDE_DIRS)
     include_directories("${OpenCV_INCLUDE_DIRS}")
     link_directories(${OpenCV_DIR}/lib)
