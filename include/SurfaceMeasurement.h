@@ -1,5 +1,4 @@
-#ifndef SURFACEMEASUREMENT_H
-#define SURFACEMEASUREMENT_H
+#pragma once
 
 #include <Eigen/Core>
 #include <Eigen/Dense>
@@ -39,5 +38,3 @@ class SurfaceMeasurement {
     // TODO: Remove this?
     CameraParams cameraParameters{640, 480, 525.0, 525.0, 319.5, 239.5};
 };
-
-#endif  // SURFACEMEASUREMENT_H
