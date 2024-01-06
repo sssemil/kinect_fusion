@@ -4,11 +4,11 @@
 #include "DepthFrame.h"
 
 class DepthSensor {
-public:
+   public:
     DepthSensor();
     ~DepthSensor();
 
     DepthFrame getNextFrame();
 };
 
-#endif // DEPTHSENSOR_H
+#endif  // DEPTHSENSOR_H

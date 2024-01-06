@@ -4,11 +4,11 @@
 #include "DepthFrame.h"
 
 class FusionAlgorithm {
-public:
+   public:
     FusionAlgorithm();
     ~FusionAlgorithm();
 
-    void processDepthData(const DepthFrame& depthData);
+    void processDepthData(const DepthFrame &depthData);
 };
 
-#endif // FUSIONALGORITHM_H
+#endif  // FUSIONALGORITHM_H

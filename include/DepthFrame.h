@@ -1,8 +1,8 @@
 #ifndef DEPTHFRAME_H
 #define DEPTHFRAME_H
 
-#include <vector>
 #include <cstdint>
+#include <vector>
 
 struct Point3D {
     float x, y;
@@ -12,19 +12,20 @@ struct Point3D {
 };
 
 class DepthFrame {
-public:
+   public:
     DepthFrame(int width, int height);
     ~DepthFrame();
 
-    void setData(int x, int y, float depth, uint8_t r, uint8_t g, uint8_t b, float confidence);
+    void setData(int x, int y, float depth, uint8_t r, uint8_t g, uint8_t b,
+                 float confidence);
 
     Point3D getData(int x, int y) const;
 
     std::vector<Point3D> toPointCloud() const;
 
-private:
+   private:
     int width, height;
     std::vector<std::vector<Point3D>> data;
 };
 
-#endif // DEPTHFRAME_H
+#endif  // DEPTHFRAME_H
