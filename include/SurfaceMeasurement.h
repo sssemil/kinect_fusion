@@ -1,3 +1,6 @@
+#ifndef SURFACEMEASUREMENT_H
+#define SURFACEMEASUREMENT_H
+
 // opencv bilateral filter
 
 #include <Eigen/Core>
@@ -40,6 +43,11 @@ struct CameraParams {
             focalX / (1 << level),     focalY / (1 << level),
             principalX / (1 << level), principalY / (1 << level)};
     }
+};
+
+class SurfaceMeasurement {
+   public:
+    SurfaceMeasurement();
 };
 
 SurfaceMeasurement::SurfaceMeasurement() {
@@ -155,3 +163,5 @@ SurfaceMeasurement::SurfaceMeasurement() {
         }
     }
 }
+
+#endif  // SURFACEMEASUREMENT_H
