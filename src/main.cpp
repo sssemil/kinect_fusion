@@ -1,14 +1,15 @@
 #include <iostream>
 
-#include "ProcrustesAligner.h"
 #include "Eigen.h"
 #include "MeshWriter.h"
+#include "ProcrustesAligner.h"
+#include "SimpleMesh.h"
 #include "Vertex.h"
 #include "VirtualSensor.h"
 #include "cxxopts.hpp"
-#include "SimpleMesh.h"
 
-int processFrame(VirtualSensor &sensor, const std::string &filenameBaseOut, SimpleMesh &mainMesh) {
+int processFrame(VirtualSensor &sensor, const std::string &filenameBaseOut,
+                 SimpleMesh &mainMesh) {
     // get ptr to the current depth frame
     // depth is stored in row major (get dimensions via
     // sensor.GetDepthImageWidth() / GetDepthImageHeight())
@@ -74,33 +75,49 @@ int processFrame(VirtualSensor &sensor, const std::string &filenameBaseOut, Simp
     SimpleMesh currentMesh;
     // TODO: load vertices into a SimpleMesh object
 
-    // Fill in the matched points: sourcePoints[i] is matched with targetPoints[i].
-    // TODO: select random points from the meshes and fill in the source and target points.
+    // Fill in the matched points: sourcePoints[i] is matched with
+    // targetPoints[i].
+    // TODO: select random points from the meshes and fill in the source and
+    // target points.
     std::vector<Vector3f> sourcePoints;
-    sourcePoints.push_back(Vector3f(-0.02744f, 0.179958f, 0.00980739f)); // left ear
-    sourcePoints.push_back(Vector3f(-0.0847672f, 0.180632f, -0.0148538f)); // right ear
-    sourcePoints.push_back(Vector3f(0.0544159f, 0.0715162f, 0.0231181f)); // tail
-    sourcePoints.push_back(Vector3f(-0.0854079f, 0.10966f, 0.0842135f)); // mouth
+    sourcePoints.push_back(
+        Vector3f(-0.02744f, 0.179958f, 0.00980739f));  // left ear
+    sourcePoints.push_back(
+        Vector3f(-0.0847672f, 0.180632f, -0.0148538f));  // right ear
+    sourcePoints.push_back(
+        Vector3f(0.0544159f, 0.0715162f, 0.0231181f));  // tail
+    sourcePoints.push_back(
+        Vector3f(-0.0854079f, 0.10966f, 0.0842135f));  // mouth
 
     std::vector<Vector3f> targetPoints;
-    targetPoints.push_back(Vector3f(-0.0106867f, 0.179756f, -0.0283248f)); // left ear
-    targetPoints.push_back(Vector3f(-0.0639191f, 0.179114f, -0.0588715f)); // right ear
-    targetPoints.push_back(Vector3f(0.0590575f, 0.066407f, 0.00686641f)); // tail
-    targetPoints.push_back(Vector3f(-0.0789843f, 0.13256f, 0.0519517f)); // mouth
+    targetPoints.push_back(
+        Vector3f(-0.0106867f, 0.179756f, -0.0283248f));  // left ear
+    targetPoints.push_back(
+        Vector3f(-0.0639191f, 0.179114f, -0.0588715f));  // right ear
+    targetPoints.push_back(
+        Vector3f(0.0590575f, 0.066407f, 0.00686641f));  // tail
+    targetPoints.push_back(
+        Vector3f(-0.0789843f, 0.13256f, 0.0519517f));  // mouth
 
     // Estimate the pose from source to target mesh with Procrustes alignment.
-	ProcrustesAligner aligner;
-	Matrix4f estimatedPose = aligner.estimatePose(sourcePoints, targetPoints);
+    ProcrustesAligner aligner;
+    Matrix4f estimatedPose = aligner.estimatePose(sourcePoints, targetPoints);
 
-	// Visualize the resulting joined mesh. We add triangulated spheres for point matches.
+    // Visualize the resulting joined mesh. We add triangulated spheres for
+    // point matches.
     // TODO: change to join into mainMesh obj instead of creating new one
-	SimpleMesh resultingMesh = SimpleMesh::joinMeshes(mainMesh, currentMesh, estimatedPose);
-	for (const auto& sourcePoint : sourcePoints) {
-		resultingMesh = SimpleMesh::joinMeshes(SimpleMesh::sphere(sourcePoint, 0.002f), resultingMesh, estimatedPose);
-	}
-	for (const auto& targetPoint : targetPoints) {
-		resultingMesh = SimpleMesh::joinMeshes(SimpleMesh::sphere(targetPoint, 0.002f), resultingMesh, Matrix4f::Identity());
-	}
+    SimpleMesh resultingMesh =
+        SimpleMesh::joinMeshes(mainMesh, currentMesh, estimatedPose);
+    for (const auto &sourcePoint : sourcePoints) {
+        resultingMesh =
+            SimpleMesh::joinMeshes(SimpleMesh::sphere(sourcePoint, 0.002f),
+                                   resultingMesh, estimatedPose);
+    }
+    for (const auto &targetPoint : targetPoints) {
+        resultingMesh =
+            SimpleMesh::joinMeshes(SimpleMesh::sphere(targetPoint, 0.002f),
+                                   resultingMesh, Matrix4f::Identity());
+    }
 
     // free mem
     delete[] vertices;
