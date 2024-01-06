@@ -48,7 +48,7 @@ bool WriteMesh(Vertex *vertices, unsigned int width, unsigned int height,
                const std::string &filename) {
     float edgeThreshold = 0.01f;  // 1cm
 
-    // TODO 2: use the OFF file format to save the vertices grid
+    // use the OFF file format to save the vertices grid
     // (http://www.geomview.org/docs/html/OFF.html)
     // - have a look at the "off_sample.off" file to see how to store the
     // vertices and triangles
@@ -65,10 +65,10 @@ bool WriteMesh(Vertex *vertices, unsigned int width, unsigned int height,
     // - only write triangles with valid vertices and an edge length smaller
     // then edgeThreshold
 
-    // TODO: Get number of vertices
+    // Get number of vertices
     unsigned int nVertices = width * height;
 
-    // TODO: Determine number of valid faces
+    // Determine number of valid faces
     unsigned nFaces = 0;
     VertexAction countFaces = [&nFaces](const Vertex &, const Vertex &,
                                         const Vertex &,
@@ -106,7 +106,7 @@ bool WriteMesh(Vertex *vertices, unsigned int width, unsigned int height,
     // 3 0 1 2
     // 3 0 2 3
 
-    // TODO: save vertices
+    // save vertices
     outFile << "# list of vertices" << std::endl;
     outFile << "# X Y Z R G B A" << std::endl;
     for (unsigned int y = 0; y < height; ++y) {
@@ -124,7 +124,7 @@ bool WriteMesh(Vertex *vertices, unsigned int width, unsigned int height,
         }
     }
 
-    // TODO: save valid faces
+    // save valid faces
     std::cout << "# list of faces" << std::endl;
     std::cout << "# nVerticesPerFace idx0 idx1 idx2 ..." << std::endl;
 
@@ -192,7 +192,7 @@ int main() {
         Matrix4f trajectory = sensor.GetTrajectory();
         Matrix4f trajectoryInv = sensor.GetTrajectory().inverse();
 
-        // TODO 1: back-projection
+        // back-projection
         // write result to the vertices array below, keep pixel ordering!
         // if the depth value at idx is invalid (MINF) write the following
         // values to the vertices array vertices[idx].position = Vector4f(MINF,
