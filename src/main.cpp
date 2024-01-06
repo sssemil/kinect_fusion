@@ -4,16 +4,13 @@
 #include "MeshWriter.h"
 #include "Vertex.h"
 #include "VirtualSensor.h"
+#include "cxxopts.hpp"
 
-int main() {
-    // Make sure this path points to the data folder
-    std::string filenameIn = "../Data/rgbd_dataset_freiburg1_xyz/";
-    std::string filenameBaseOut = "mesh_";
-
+int run(const std::string& datasetPath, const std::string& filenameBaseOut) {
     // load video
     std::cout << "Initialize virtual sensor..." << std::endl;
     VirtualSensor sensor;
-    if (!sensor.Init(filenameIn)) {
+    if (!sensor.Init(datasetPath)) {
         std::cout << "Failed to initialize the sensor!\nCheck file path!"
                   << std::endl;
         return -1;
@@ -87,4 +84,44 @@ int main() {
     }
 
     return 0;
+}
+
+int main(int argc, char *argv[]) {
+    try {
+        cxxopts::Options options(argv[0], " - command line options");
+        options.allow_unrecognised_options().add_options()(
+            "d,dataset", "Path to the dataset", cxxopts::value<std::string>())(
+            "o,output", "Base output filename", cxxopts::value<std::string>())(
+            "h,help", "Print help");
+
+        auto result = options.parse(argc, argv);
+
+        if (result.count("help")) {
+            std::cout << options.help() << std::endl;
+            return 0;
+        }
+
+        std::string datasetPath;
+        if (result.count("dataset")) {
+            datasetPath = result["dataset"].as<std::string>();
+        } else {
+            std::cerr
+                << "Dataset path not provided. Use -d or --dataset option."
+                << std::endl;
+            return -1;
+        }
+
+        std::string filenameBaseOut = "mesh_";  // Default value
+        if (result.count("output")) {
+            filenameBaseOut = result["output"].as<std::string>();
+        }
+
+        std::cout << "Dataset Path: " << datasetPath << std::endl;
+        std::cout << "Base Output Filename: " << filenameBaseOut << std::endl;
+
+        return run(datasetPath, filenameBaseOut);
+    } catch (cxxopts::exceptions::option_has_no_value &ex) {
+        std::cerr << ex.what() << "\n";
+        return 1;
+    }
 }

@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 14)
 # Options
 set(LIBRARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../Libs CACHE PATH "Path to lib folder")
 set(Eigen3_DIR ${LIBRARY_DIR}/Eigen/share/eigen3/cmake CACHE PATH "Path to installed Eigen")
+set(CXXOPTS_INCLUDE_DIR ${LIBRARY_DIR}/cxxopts/include CACHE PATH "Path to cxxopts include directory")
 
 ## OpenCV Integration
 # Optional: Set OpenCV_DIR if you want to use a custom version of OpenCV
@@ -33,7 +34,13 @@ link_directories(${FreeImage_LIBRARY_DIR})
 
 # Executable and Linking
 add_executable(main ${SOURCES})
-target_include_directories(main PUBLIC ${EIGEN3_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS} ${PROJECT_INCLUDE_DIR} ${FreeImage_INCLUDE_DIR})
+target_include_directories(main PUBLIC
+        ${EIGEN3_INCLUDE_DIR}
+        ${OpenCV_INCLUDE_DIRS}
+        ${PROJECT_INCLUDE_DIR}
+        ${FreeImage_INCLUDE_DIR}
+        ${CXXOPTS_INCLUDE_DIR}
+)
 target_link_libraries(main general Eigen3::Eigen ${OpenCV_LIBS} freeimage)
 
 add_custom_target(
