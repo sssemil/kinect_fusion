@@ -17,13 +17,13 @@ CameraParams::CameraParams()
       principalX(0),
       principalY(0) {}
 
-CameraParams CameraParams::cameraParametersByLevel(int level) {
+CameraParams CameraParams::cameraParametersByLevel(int level) const {
     return CameraParams{imageWidth >> level,       imageHeight >> level,
                         focalX / (1 << level),     focalY / (1 << level),
                         principalX / (1 << level), principalY / (1 << level)};
 }
 
-SurfaceMeasurement::SurfaceMeasurement() {}
+SurfaceMeasurement::SurfaceMeasurement() = default;
 
 void SurfaceMeasurement::compute_normal_map(cv::Mat &vertexMap,
                                             cv::Mat &normalMap) {
@@ -107,6 +107,7 @@ void SurfaceMeasurement::surface_mesasurement(cv::Mat &inputFrame,
         data.surfacePyramid.push_back(surfaceMap);
         data.normalPyramid.push_back(normalMap);
 
+        // TODO: Dead code?
         CameraParams cameraParametersTemp =
             cameraParameters.cameraParametersByLevel(level);
     }

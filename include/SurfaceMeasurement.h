@@ -21,7 +21,7 @@ struct CameraParams {
     CameraParams(int imageWidth, int imageHeight, float focalX, float focalY,
                  float principalX, float principalY);
     CameraParams();
-    CameraParams cameraParametersByLevel(int level);
+    CameraParams cameraParametersByLevel(int level) const;
 };
 
 class SurfaceMeasurement {
@@ -29,13 +29,14 @@ class SurfaceMeasurement {
     SurfaceMeasurement();
 
     void compute_normal_map(cv::Mat &vertexMap, cv::Mat &normalMap);
-    void compute_surface_vertex(cv::Mat &depthMap, cv::Mat &vertexMap,
-                                const float depthCutOff,
-                                CameraParams &cameraParameters);
+    static void compute_surface_vertex(cv::Mat &depthMap, cv::Mat &vertexMap,
+                                       float depthCutOff,
+                                       CameraParams &cameraParameters);
     void surface_mesasurement(cv::Mat &inputFrame,
                               CameraParams &cameraParameters, int depthLevel);
 
    private:
+    // TODO: Remove this?
     CameraParams cameraParameters{640, 480, 525.0, 525.0, 319.5, 239.5};
 };
 
