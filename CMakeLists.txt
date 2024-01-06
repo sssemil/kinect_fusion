@@ -3,6 +3,10 @@ project(kinect_fusion)
 
 set(CMAKE_CXX_STANDARD 14)
 
+# Options
+set(LIBRARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../Libs CACHE PATH "Path to lib folder")
+set(Eigen3_DIR ${LIBRARY_DIR}/Eigen/share/eigen3/cmake CACHE PATH "Path to installed Eigen")
+
 ## OpenCV Integration
 # Optional: Set OpenCV_DIR if you want to use a custom version of OpenCV
 # SET("OpenCV_DIR" "/opt/opencv/usr/local/share/OpenCV")
@@ -25,10 +29,12 @@ set(PROJECT_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
 # Automatically find all .cpp files in the src directory
 file(GLOB_RECURSE SOURCES "${PROJECT_SOURCE_DIR}/*.cpp")
 
+link_directories(${FreeImage_LIBRARY_DIR})
+
 # Executable and Linking
 add_executable(main ${SOURCES})
-target_include_directories(main PUBLIC ${EIGEN3_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS} ${PROJECT_INCLUDE_DIR})
-target_link_libraries(main general Eigen3::Eigen ${OpenCV_LIBS})
+target_include_directories(main PUBLIC ${EIGEN3_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS} ${PROJECT_INCLUDE_DIR} ${FreeImage_INCLUDE_DIR})
+target_link_libraries(main general Eigen3::Eigen ${OpenCV_LIBS} freeimage)
 
 add_custom_target(
         format
