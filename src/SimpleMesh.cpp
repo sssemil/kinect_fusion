@@ -367,3 +367,9 @@ Matrix3f SimpleMesh::face(const Vector3f& vA, const Vector3f& vB) {
 
     return rotation;
 }
+
+Vector3f SimpleMesh::getVertexPosition3f(unsigned int i) {
+    auto src = m_vertices[i].position;
+    Vector3f src3(src.x(), src.y(), src.z());
+    return src3;
+}

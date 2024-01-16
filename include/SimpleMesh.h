@@ -37,6 +37,7 @@ class SimpleMesh {
                                float radius, unsigned stacks, unsigned slices,
                                const Vector4uc& color = Vector4uc{0, 0, 255,
                                                                   255});
+    Vector3f getVertexPosition3f(unsigned int i);
 
    private:
     std::vector<Vertex> m_vertices;
