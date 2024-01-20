@@ -12,7 +12,7 @@ class SimpleMesh {
     SimpleMesh();
 
     void clear();
-    unsigned int addVertex(Vertex& vertex);
+    unsigned int addVertex(const Vertex& vertex);
     unsigned int addFace(unsigned int idx0, unsigned int idx1,
                          unsigned int idx2);
 

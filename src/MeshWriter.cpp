@@ -112,3 +112,64 @@ bool WriteMesh(Vertex *vertices, unsigned int width, unsigned int height,
 
     return true;
 }
+
+bool WriteMesh(const std::vector<Vertex>& vertices, unsigned int width, unsigned int height, const std::string &filename) {
+    float edgeThreshold = 0.01f;  // 1cm
+
+    // Get number of vertices
+    unsigned int nVertices = vertices.size();
+
+    // Determine number of valid faces
+    unsigned nFaces = 0;
+    for (unsigned int y = 0; y < height - 1; ++y) {
+        for (unsigned int x = 0; x < width - 1; ++x) {
+            unsigned int idx = y * width + x;
+            if (idx < nVertices - width - 1) {
+                // Process each quad to count valid faces
+                // Assuming ProcessVertex function is adapted to work with vector
+                ProcessVertex(idx, width, vertices, edgeThreshold, [&nFaces](const Vertex &, const Vertex &, const Vertex &, const Vertex &) { nFaces += 2; });
+            }
+        }
+    }
+
+    // Write off file
+    std::ofstream outFile(filename);
+    if (!outFile.is_open()) return false;
+
+    // write header
+    outFile << "COFF" << std::endl;
+    outFile << nVertices << " " << nFaces << " 0" << std::endl;
+
+    // save vertices
+    for (const Vertex& v : vertices) {
+        if (v.position.x() != MINF) {
+            outFile << v.position.x() << " " << v.position.y() << " " << v.position.z() << " " << (int)v.color.x() << " " << (int)v.color.y() << " " << (int)v.color.z() << " " << (int)v.color.w() << std::endl;
+        } else {
+            outFile << "0.0 0.0 0.0 0 0 0 0" << std::endl;
+        }
+    }
+
+    // save valid faces
+    for (unsigned int y = 0; y < height - 1; ++y) {
+        for (unsigned int x = 0; x < width - 1; ++x) {
+            unsigned int idx = y * width + x;
+            if (idx < nVertices - width - 1) {
+                // Process each quad to write valid faces
+                // Assuming ProcessVertex function is adapted to work with vector
+                ProcessVertex(idx, width, vertices, edgeThreshold, [&outFile, &vertices](const Vertex &v0, const Vertex &v1, const Vertex &v2, const Vertex &v3) {
+                    unsigned int idx0 = &v0 - &vertices[0];
+                    unsigned int idx1 = &v1 - &vertices[0];
+                    unsigned int idx2 = &v2 - &vertices[0];
+                    unsigned int idx3 = &v3 - &vertices[0];
+                    outFile << "3 " << idx0 << " " << idx1 << " " << idx2 << std::endl;
+                    outFile << "3 " << idx1 << " " << idx3 << " " << idx2 << std::endl;
+                });
+            }
+        }
+    }
+
+    // close file
+    outFile.close();
+
+    return true;
+}

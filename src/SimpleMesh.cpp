@@ -18,7 +18,7 @@ void SimpleMesh::clear() {
     m_triangles.clear();
 }
 
-unsigned int SimpleMesh::addVertex(Vertex& vertex) {
+unsigned int SimpleMesh::addVertex(const Vertex& vertex) {
     auto vId = static_cast<unsigned int>(m_vertices.size());
     m_vertices.push_back(vertex);
     return vId;

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <random>
 
 #include "Eigen.h"
 #include "MeshWriter.h"
@@ -8,8 +9,12 @@
 #include "VirtualSensor.h"
 #include "cxxopts.hpp"
 
-int processFrame(VirtualSensor &sensor, const std::string &filenameBaseOut,
-                 SimpleMesh &mainMesh) {
+#define NUMBER_OF_POINTS 10
+
+int processFrame(VirtualSensor &sensor, const std::string &filenameBaseOut, SimpleMesh &mainMesh, int frameCnt) {
+    std::cout << "Processing frame " << frameCnt << std::endl;
+    std::cout << "Main mesh size at start: " << mainMesh.getVertices().size() << std::endl;
+
     // get ptr to the current depth frame
     // depth is stored in row major (get dimensions via
     // sensor.GetDepthImageWidth() / GetDepthImageHeight())
@@ -41,63 +46,57 @@ int processFrame(VirtualSensor &sensor, const std::string &filenameBaseOut,
     // MINF, MINF, MINF); vertices[idx].color = Vector4uc(0,0,0,0);
     // otherwise apply back-projection and transform the vertex to world
     // space, use the corresponding color from the colormap
-    auto *vertices =
-        new Vertex[sensor.GetDepthImageWidth() * sensor.GetDepthImageHeight()];
+    std::vector<Vertex> vertices;
     for (unsigned int y = 0; y < sensor.GetDepthImageHeight(); ++y) {
         for (unsigned int x = 0; x < sensor.GetDepthImageWidth(); ++x) {
             unsigned int idx = y * sensor.GetDepthImageWidth() + x;
             float depth = depthMap[idx];
-            if (depth == MINF) {
-                vertices[idx].position = Vector4f(MINF, MINF, MINF, MINF);
-                vertices[idx].color = Vector4uc(0, 0, 0, 0);
-            } else {
+            if (depth != MINF) {
                 Vector4f p = Vector4f(depth * (x - cX) / fX,
                                       depth * (y - cY) / fY, depth, 1.0f);
                 Vector4f p_world = trajectoryInv * depthExtrinsicsInv * p;
-                vertices[idx].position = p_world;
-                vertices[idx].color =
+                Vertex v;
+                v.position = p_world;
+                v.color =
                     Vector4uc(colorMap[idx * 4], colorMap[idx * 4 + 1],
                               colorMap[idx * 4 + 2], colorMap[idx * 4 + 3]);
+                vertices.push_back(v);
             }
         }
     }
 
-    // write mesh file
-    std::stringstream ss;
-    ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
-    if (!WriteMesh(vertices, sensor.GetDepthImageWidth(),
-                   sensor.GetDepthImageHeight(), ss.str())) {
-        std::cout << "Failed to write mesh!\nCheck file path!" << std::endl;
-        return -1;
-    }
-
     // merge meshes
     SimpleMesh currentMesh;
-    // TODO: load vertices into a SimpleMesh object
+    for (const Vertex & v : vertices) {
+        currentMesh.addVertex(v);
+    }
+
+    bool firstFrame = mainMesh.getVertices().empty();
+    if (firstFrame) {
+        std::cout << "First frame" << std::endl;
+        mainMesh = currentMesh;
+        return 0;
+    }
 
     // Fill in the matched points: sourcePoints[i] is matched with
     // targetPoints[i].
-    // TODO: select random points from the meshes and fill in the source and
-    // target points.
     std::vector<Vector3f> sourcePoints;
-    sourcePoints.push_back(
-        Vector3f(-0.02744f, 0.179958f, 0.00980739f));  // left ear
-    sourcePoints.push_back(
-        Vector3f(-0.0847672f, 0.180632f, -0.0148538f));  // right ear
-    sourcePoints.push_back(
-        Vector3f(0.0544159f, 0.0715162f, 0.0231181f));  // tail
-    sourcePoints.push_back(
-        Vector3f(-0.0854079f, 0.10966f, 0.0842135f));  // mouth
-
     std::vector<Vector3f> targetPoints;
-    targetPoints.push_back(
-        Vector3f(-0.0106867f, 0.179756f, -0.0283248f));  // left ear
-    targetPoints.push_back(
-        Vector3f(-0.0639191f, 0.179114f, -0.0588715f));  // right ear
-    targetPoints.push_back(
-        Vector3f(0.0590575f, 0.066407f, 0.00686641f));  // tail
-    targetPoints.push_back(
-        Vector3f(-0.0789843f, 0.13256f, 0.0519517f));  // mouth
+
+    std::default_random_engine generator; // NOLINT(*-msc51-cpp)
+    std::uniform_int_distribution<unsigned int> distributionMain(
+        0, mainMesh.getVertices().size() - 1);
+    std::uniform_int_distribution<unsigned int> distributionCurrent(
+        0, currentMesh.getVertices().size() - 1);
+
+    for (int i = 0; i < NUMBER_OF_POINTS; ++i) {
+        auto randomMainIndex = distributionMain(generator);
+        auto randomCurrentIndex = distributionCurrent(generator);
+        auto src = mainMesh.getVertexPosition3f(randomMainIndex);
+        auto tgt = currentMesh.getVertexPosition3f(randomCurrentIndex);
+        sourcePoints.push_back(src);
+        targetPoints.push_back(tgt);
+    }
 
     // Estimate the pose from source to target mesh with Procrustes alignment.
     ProcrustesAligner aligner;
@@ -108,20 +107,9 @@ int processFrame(VirtualSensor &sensor, const std::string &filenameBaseOut,
     // TODO: change to join into mainMesh obj instead of creating new one
     SimpleMesh resultingMesh =
         SimpleMesh::joinMeshes(mainMesh, currentMesh, estimatedPose);
-    for (const auto &sourcePoint : sourcePoints) {
-        resultingMesh =
-            SimpleMesh::joinMeshes(SimpleMesh::sphere(sourcePoint, 0.002f),
-                                   resultingMesh, estimatedPose);
-    }
-    for (const auto &targetPoint : targetPoints) {
-        resultingMesh =
-            SimpleMesh::joinMeshes(SimpleMesh::sphere(targetPoint, 0.002f),
-                                   resultingMesh, Matrix4f::Identity());
-    }
+    mainMesh = resultingMesh;
 
-    // free mem
-    delete[] vertices;
-
+    std::cout << "Main mesh size at end: " << mainMesh.getVertices().size() << std::endl;
     return 0;
 }
 
@@ -139,12 +127,29 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut) {
     SimpleMesh mainMesh;
 
     // convert video to meshes
+    int frameCnt = 0;
     while (sensor.ProcessNextFrame()) {
-        int r = processFrame(sensor, filenameBaseOut, mainMesh);
+        int r = processFrame(sensor, filenameBaseOut, mainMesh, frameCnt);
         if (r != 0) {
             return r;
         }
+        frameCnt++;
+
+        if (frameCnt > 1) {
+            break;
+        }
     }
+
+    // TODO: write mesh file
+    std::stringstream ss;
+    ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
+    if (!WriteMesh(mainMesh.getVertices(), sensor.GetDepthImageWidth(),
+                   sensor.GetDepthImageHeight(), ss.str())) {
+        std::cout << "Failed to write mesh!\nCheck file path!" << std::endl;
+        return -1;
+    }
+
+    std::cout << "Finished!" << std::endl;
 
     return 0;
 }
