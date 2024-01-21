@@ -7,6 +7,7 @@
 #include "SimpleMesh.h"
 #include "VirtualSensor.h"
 #include "cxxopts.hpp"
+#include "TSDFVolume.h"
 
 int logMesh(VirtualSensor &sensor, const Matrix4f &currentCameraPose,
             const std::string &filenameBaseOut) {
@@ -58,6 +59,11 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut) {
     Matrix4f currentCameraToWorld = Matrix4f::Identity();
     estimatedPoses.emplace_back(currentCameraToWorld.inverse());
 
+    // Define the dimensions and resolution of the TSDF volume
+    auto resolution = 512;
+    float voxelSize = 0.005f; // meters
+    TSDFVolume tsdfVolume(resolution, resolution,resolution, voxelSize);
+
     int i = 0;
     const int iMax = 50;
     while (sensor.processNextFrame() && i <= iMax) {
@@ -81,7 +87,10 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut) {
                   << currentCameraPose << std::endl;
         estimatedPoses.push_back(currentCameraPose);
 
-        if (i % 5 == 0) {
+        Matrix4f cameraToWorld = currentCameraPose.inverse();
+        tsdfVolume.integrate(source, 0.1f);
+
+        if (i % 10 == 0) {
             if (logMesh(sensor, currentCameraPose, filenameBaseOut) != 0) {
                 return -1;
             }

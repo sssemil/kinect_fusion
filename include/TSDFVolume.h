@@ -2,6 +2,7 @@
 
 #include <Eigen/Dense>
 #include <vector>
+#include "PointCloud.h"
 
 class TSDFVolume {
 public:
@@ -16,6 +17,8 @@ public:
     Voxel& getVoxel(int x, int y, int z);
     const Voxel& getVoxel(int x, int y, int z) const;
 
+    void integrate(const PointCloud& pointCloud, float truncationDistance);
+
 private:
     std::vector<Voxel> voxels;
     int width, height, depth;
@@ -25,5 +28,3 @@ private:
         return x + width * (y + height * z);
     }
 };
-
-#endif // TSDFVOLUME_H
