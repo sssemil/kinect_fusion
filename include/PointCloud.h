@@ -81,8 +81,12 @@ public:
                     continue;
                 }
 
-                // TODO: Compute the normals using central differences. 
-                normalsTmp[idx] = Vector3f(1, 1, 1); // Needs to be replaced.
+                // Compute the normals using central differences.
+                const Vector3f hVec = 0.5f * (pointsTmp[idx + 1] - pointsTmp[idx - 1]);
+                const Vector3f vVec = 0.5f * (pointsTmp[idx + width] - pointsTmp[idx - width]);
+                const Vector3f cVec = vVec.cross(hVec);
+
+                normalsTmp[idx] = cVec;
                 normalsTmp[idx].normalize();
             }
         }
