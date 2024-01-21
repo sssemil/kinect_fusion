@@ -5,9 +5,9 @@
 #include "ICPOptimizer.h"
 #include "PointCloud.h"
 #include "SimpleMesh.h"
+#include "TSDFVolume.h"
 #include "VirtualSensor.h"
 #include "cxxopts.hpp"
-#include "TSDFVolume.h"
 
 int logMesh(VirtualSensor &sensor, const Matrix4f &currentCameraPose,
             const std::string &filenameBaseOut) {
@@ -61,11 +61,11 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut) {
 
     // Define the dimensions and resolution of the TSDF volume
     auto resolution = 512;
-    float voxelSize = 0.005f; // meters
-    TSDFVolume tsdfVolume(resolution, resolution,resolution, voxelSize);
+    float voxelSize = 0.005f;  // meters
+    TSDFVolume tsdfVolume(resolution, resolution, resolution, voxelSize);
 
     int i = 0;
-    const int iMax = 50;
+    const int iMax = 10;
     while (sensor.processNextFrame() && i <= iMax) {
         Matrix3f depthIntrinsics = sensor.getDepthIntrinsics();
         Matrix4f depthExtrinsics = sensor.getDepthExtrinsics();
@@ -98,6 +98,8 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut) {
 
         i++;
     }
+
+    tsdfVolume.storeAsOff(filenameBaseOut);
 
     delete optimizer;
 
