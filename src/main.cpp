@@ -8,6 +8,27 @@
 #include "VirtualSensor.h"
 #include "cxxopts.hpp"
 
+int logMesh(VirtualSensor &sensor, const Matrix4f &currentCameraPose,
+            const std::string &filenameBaseOut) {
+    // We write out the mesh to file for debugging.
+    SimpleMesh currentDepthMesh{sensor, currentCameraPose, 0.1f};
+    SimpleMesh currentCameraMesh =
+        SimpleMesh::camera(currentCameraPose, 0.0015f);
+    SimpleMesh resultingMesh = SimpleMesh::joinMeshes(
+        currentDepthMesh, currentCameraMesh, Matrix4f::Identity());
+
+    std::stringstream ss;
+    ss << filenameBaseOut << sensor.getCurrentFrameCnt() << ".off";
+    std::cout << filenameBaseOut << sensor.getCurrentFrameCnt() << ".off"
+              << std::endl;
+    if (!resultingMesh.writeMesh(ss.str())) {
+        std::cout << "Failed to write mesh!\nCheck file path!" << std::endl;
+        return -1;
+    }
+
+    return 0;
+}
+
 int run(const std::string &datasetPath, const std::string &filenameBaseOut) {
     // load video
     std::cout << "Initialize virtual sensor..." << std::endl;
@@ -35,12 +56,11 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut) {
     // We store the estimated camera poses.
     std::vector<Matrix4f> estimatedPoses;
     Matrix4f currentCameraToWorld = Matrix4f::Identity();
-    estimatedPoses.push_back(currentCameraToWorld.inverse());
+    estimatedPoses.emplace_back(currentCameraToWorld.inverse());
 
     int i = 0;
     const int iMax = 50;
     while (sensor.processNextFrame() && i <= iMax) {
-        float *depthMap = sensor.getDepth();
         Matrix3f depthIntrinsics = sensor.getDepthIntrinsics();
         Matrix4f depthExtrinsics = sensor.getDepthExtrinsics();
 
@@ -62,20 +82,7 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut) {
         estimatedPoses.push_back(currentCameraPose);
 
         if (i % 5 == 0) {
-            // We write out the mesh to file for debugging.
-            SimpleMesh currentDepthMesh{sensor, currentCameraPose, 0.1f};
-            SimpleMesh currentCameraMesh =
-                SimpleMesh::camera(currentCameraPose, 0.0015f);
-            SimpleMesh resultingMesh = SimpleMesh::joinMeshes(
-                currentDepthMesh, currentCameraMesh, Matrix4f::Identity());
-
-            std::stringstream ss;
-            ss << filenameBaseOut << sensor.getCurrentFrameCnt() << ".off";
-            std::cout << filenameBaseOut << sensor.getCurrentFrameCnt()
-                      << ".off" << std::endl;
-            if (!resultingMesh.writeMesh(ss.str())) {
-                std::cout << "Failed to write mesh!\nCheck file path!"
-                          << std::endl;
+            if (logMesh(sensor, currentCameraPose, filenameBaseOut) != 0) {
                 return -1;
             }
         }
