@@ -1,9 +1,9 @@
 #pragma once
-#include "SimpleMesh.h"
 #include "Eigen.h"
+#include "SimpleMesh.h"
 
 class PointCloud {
-public:
+   public:
     PointCloud() {}
 
     PointCloud(const SimpleMesh& mesh) {
@@ -15,14 +15,17 @@ public:
         // Copy vertices.
         m_points.reserve(nVertices);
         for (const auto& vertex : vertices) {
-            m_points.push_back(Vector3f{ vertex.position.x(), vertex.position.y(), vertex.position.z() });
+            m_points.push_back(Vector3f{
+                vertex.position.x(), vertex.position.y(), vertex.position.z()});
         }
 
         // Compute normals (as an average of triangle normals).
         m_normals = std::vector<Vector3f>(nVertices, Vector3f::Zero());
         for (size_t i = 0; i < nTriangles; i++) {
             const auto& triangle = triangles[i];
-            Vector3f faceNormal = (m_points[triangle.idx1] - m_points[triangle.idx0]).cross(m_points[triangle.idx2] - m_points[triangle.idx0]);
+            Vector3f faceNormal =
+                (m_points[triangle.idx1] - m_points[triangle.idx0])
+                    .cross(m_points[triangle.idx2] - m_points[triangle.idx0]);
 
             m_normals[triangle.idx0] += faceNormal;
             m_normals[triangle.idx1] += faceNormal;
@@ -33,7 +36,10 @@ public:
         }
     }
 
-    PointCloud(float* depthMap, const Matrix3f& depthIntrinsics, const Matrix4f& depthExtrinsics, const unsigned width, const unsigned height, unsigned downsampleFactor = 1, float maxDistance = 0.1f) {
+    PointCloud(float* depthMap, const Matrix3f& depthIntrinsics,
+               const Matrix4f& depthExtrinsics, const unsigned width,
+               const unsigned height, unsigned downsampleFactor = 1,
+               float maxDistance = 0.1f) {
         // Get depth intrinsics.
         float fovX = depthIntrinsics(0, 0);
         float fovY = depthIntrinsics(1, 1);
@@ -54,36 +60,44 @@ public:
         for (int v = 0; v < height; ++v) {
             // For every pixel in a row.
             for (int u = 0; u < width; ++u) {
-                unsigned int idx = v * width + u; // linearized index
+                unsigned int idx = v * width + u;  // linearized index
                 float depth = depthMap[idx];
                 if (depth == MINF) {
                     pointsTmp[idx] = Vector3f(MINF, MINF, MINF);
-                }
-                else {
+                } else {
                     // Back-projection to camera space.
-                    pointsTmp[idx] = rotationInv * Vector3f((u - cX) / fovX * depth, (v - cY) / fovY * depth, depth) + translationInv;
+                    pointsTmp[idx] =
+                        rotationInv * Vector3f((u - cX) / fovX * depth,
+                                               (v - cY) / fovY * depth, depth) +
+                        translationInv;
                 }
             }
         }
 
-        // We need to compute derivatives and then the normalized normal vector (for valid pixels).
+        // We need to compute derivatives and then the normalized normal vector
+        // (for valid pixels).
         std::vector<Vector3f> normalsTmp(width * height);
 
 #pragma omp parallel for
         for (int v = 1; v < height - 1; ++v) {
             for (int u = 1; u < width - 1; ++u) {
-                unsigned int idx = v * width + u; // linearized index
+                unsigned int idx = v * width + u;  // linearized index
 
                 const float du = 0.5f * (depthMap[idx + 1] - depthMap[idx - 1]);
-                const float dv = 0.5f * (depthMap[idx + width] - depthMap[idx - width]);
-                if (!std::isfinite(du) || !std::isfinite(dv) || abs(du) > maxDistanceHalved || abs(dv) > maxDistanceHalved) {
+                const float dv =
+                    0.5f * (depthMap[idx + width] - depthMap[idx - width]);
+                if (!std::isfinite(du) || !std::isfinite(dv) ||
+                    abs(du) > maxDistanceHalved ||
+                    abs(dv) > maxDistanceHalved) {
                     normalsTmp[idx] = Vector3f(MINF, MINF, MINF);
                     continue;
                 }
 
                 // Compute the normals using central differences.
-                const Vector3f hVec = 0.5f * (pointsTmp[idx + 1] - pointsTmp[idx - 1]);
-                const Vector3f vVec = 0.5f * (pointsTmp[idx + width] - pointsTmp[idx - width]);
+                const Vector3f hVec =
+                    0.5f * (pointsTmp[idx + 1] - pointsTmp[idx - 1]);
+                const Vector3f vVec =
+                    0.5f * (pointsTmp[idx + width] - pointsTmp[idx - width]);
                 const Vector3f cVec = vVec.cross(hVec);
 
                 normalsTmp[idx] = cVec;
@@ -147,53 +161,45 @@ public:
             }
 
             delete ps;
-        }
-        else {
+        } else {
             double* ps = new double[3 * n];
 
             is.read((char*)ps, 3 * sizeof(double) * n);
 
             for (unsigned int i = 0; i < n; i++) {
-                Eigen::Vector3f p((float)ps[3 * i + 0], (float)ps[3 * i + 1], (float)ps[3 * i + 2]);
+                Eigen::Vector3f p((float)ps[3 * i + 0], (float)ps[3 * i + 1],
+                                  (float)ps[3 * i + 2]);
                 m_points.push_back(p);
             }
 
             is.read((char*)ps, 3 * sizeof(double) * n);
 
             for (unsigned int i = 0; i < n; i++) {
-                Eigen::Vector3f p((float)ps[3 * i + 0], (float)ps[3 * i + 1], (float)ps[3 * i + 2]);
+                Eigen::Vector3f p((float)ps[3 * i + 0], (float)ps[3 * i + 1],
+                                  (float)ps[3 * i + 2]);
                 m_normals.push_back(p);
             }
 
             delete ps;
         }
 
-
-        //std::ofstream file("pointcloud.off");
-        //file << "OFF" << std::endl;
-        //file << m_points.size() << " 0 0" << std::endl;
-        //for(unsigned int i=0; i<m_points.size(); ++i)
-        //	file << m_points[i].x() << " " << m_points[i].y() << " " << m_points[i].z() << std::endl;
-        //file.close();
+        // std::ofstream file("pointcloud.off");
+        // file << "OFF" << std::endl;
+        // file << m_points.size() << " 0 0" << std::endl;
+        // for(unsigned int i=0; i<m_points.size(); ++i)
+        //	file << m_points[i].x() << " " << m_points[i].y() << " " <<
+        //m_points[i].z() << std::endl; file.close();
 
         return true;
     }
 
-    std::vector<Vector3f>& getPoints() {
-        return m_points;
-    }
+    std::vector<Vector3f>& getPoints() { return m_points; }
 
-    const std::vector<Vector3f>& getPoints() const {
-        return m_points;
-    }
+    const std::vector<Vector3f>& getPoints() const { return m_points; }
 
-    std::vector<Vector3f>& getNormals() {
-        return m_normals;
-    }
+    std::vector<Vector3f>& getNormals() { return m_normals; }
 
-    const std::vector<Vector3f>& getNormals() const {
-        return m_normals;
-    }
+    const std::vector<Vector3f>& getNormals() const { return m_normals; }
 
     unsigned int getClosestPoint(Vector3f& p) {
         unsigned int idx = 0;
@@ -210,8 +216,7 @@ public:
         return idx;
     }
 
-private:
+   private:
     std::vector<Vector3f> m_points;
     std::vector<Vector3f> m_normals;
-
 };
