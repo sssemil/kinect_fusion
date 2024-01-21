@@ -7,6 +7,9 @@ set(CMAKE_CXX_STANDARD 14)
 set(LIBRARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../Libs CACHE PATH "Path to lib folder")
 set(Eigen3_DIR ${LIBRARY_DIR}/Eigen/share/eigen3/cmake CACHE PATH "Path to installed Eigen")
 set(CXXOPTS_INCLUDE_DIR ${LIBRARY_DIR}/cxxopts/include CACHE PATH "Path to cxxopts include directory")
+set(glog_DIR ${LIBRARY_DIR}/glog-lib/lib/cmake/glog CACHE PATH "Path to installed glog")
+set(Ceres_DIR ${LIBRARY_DIR}/Ceres/CMake CACHE PATH "Path to installed Ceres")
+set(Flann_INCLUDE_DIR ${LIBRARY_DIR}/Flann-1.8.4/ CACHE PATH "Path to Flann source folder")
 
 ## OpenCV Integration
 # Optional: Set OpenCV_DIR if you want to use a custom version of OpenCV
@@ -23,25 +26,33 @@ if (EIGEN3_INCLUDE_DIR)
     include_directories("${EIGEN3_INCLUDE_DIR}")
 endif ()
 
+find_package(Ceres REQUIRED)
+find_package(glog REQUIRED)
+get_target_property(GLOG_DLL_PATH_DEBUG glog::glog IMPORTED_LOCATION_DEBUG)
+get_target_property(GLOG_DLL_PATH_RELEASE glog::glog IMPORTED_LOCATION_RELEASE)
+
+add_definitions("-D_DISABLE_EXTENDED_ALIGNED_STORAGE")
+
 # Define the source and include directories
 set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(PROJECT_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
 
-# Automatically find all .cpp files in the src directory
-file(GLOB_RECURSE SOURCES "${PROJECT_SOURCE_DIR}/*.cpp")
+file(GLOB_RECURSE HEADER_FILES "${PROJECT_INCLUDE_DIR}/*.h")
+file(GLOB_RECURSE SOURCE_FILES "${PROJECT_SOURCE_DIR}/*.cpp")
 
 link_directories(${FreeImage_LIBRARY_DIR})
 
 # Executable and Linking
-add_executable(main ${SOURCES})
+add_executable(main ${SOURCE_FILES} ${HEADER_FILES})
 target_include_directories(main PUBLIC
         ${EIGEN3_INCLUDE_DIR}
         ${OpenCV_INCLUDE_DIRS}
         ${PROJECT_INCLUDE_DIR}
         ${FreeImage_INCLUDE_DIR}
         ${CXXOPTS_INCLUDE_DIR}
+        ${Flann_INCLUDE_DIR}
 )
-target_link_libraries(main general Eigen3::Eigen ${OpenCV_LIBS} freeimage)
+target_link_libraries(main general Eigen3::Eigen ${OpenCV_LIBS} freeimage ceres)
 
 add_custom_target(
         format
