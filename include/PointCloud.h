@@ -188,7 +188,7 @@ class PointCloud {
         // file << m_points.size() << " 0 0" << std::endl;
         // for(unsigned int i=0; i<m_points.size(); ++i)
         //	file << m_points[i].x() << " " << m_points[i].y() << " " <<
-        //m_points[i].z() << std::endl; file.close();
+        // m_points[i].z() << std::endl; file.close();
 
         return true;
     }
