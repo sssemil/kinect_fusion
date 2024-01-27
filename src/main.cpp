@@ -79,8 +79,6 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut) {
                           sensor.getDepthImageWidth(),
                           sensor.getDepthImageHeight(),
                           8};
-        // TODO: Track camera pose and then get the target image from the TSDF from that pose.
-        // TODO: Replace target with a raycasted image from the TSDF volume.
         optimizer->estimatePose(source, target, currentCameraToWorld);
 
         // Invert the transformation matrix to get the current camera pose.
