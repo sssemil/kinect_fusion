@@ -12,7 +12,7 @@ struct Coord {
 };
 
 class TSDFVolume {
-   public:
+public:
     TSDFVolume(int width, int height, int depth, float voxelSize);
 
     struct Voxel {
@@ -41,10 +41,9 @@ class TSDFVolume {
     }
 
     inline Coord fromLinearIndex(int index) const {
-        // TODO: verify
         int x = index % width;
-        int y = ((index - x) / width) % height;
-        int z = index - y;
-        return Coord{.x = z, .y = y, .z = z};
+        int y = (index / width) % height;
+        int z = index / (width * height);
+        return Coord{.x = x, .y = y, .z = z};
     }
 };
