@@ -79,16 +79,6 @@ void TSDFVolume::storeAsOff(const std::string& filenameBaseOut) {
     std::stringstream ss;
     ss << filenameBaseOut << "tsdf_volume.off";
     std::cout << "TSDFVolume stored as OFF at: " << ss.str() << std::endl;
-//    std::ofstream file(ss.str());
-//    file << "OFF" << std::endl;
-//    file << width << " " << height << " " << depth << std::endl;
-//    for (unsigned int i = 0; i < voxels.size(); ++i) {
-//        auto xyz = fromLinearIndex(i);
-//        // TODO: this isn't exporting the TSDF, it's just iterating over the coordinates
-//        file << xyz.x << " " << xyz.y << " " << xyz.z << std::endl;
-//    }
-//
-//    file.close();
 
     // convert our TSDF to Volume
     Volume vol(Vector3d(-0.1,-0.1,-0.1), Vector3d(1.1,1.1,1.1), width, height, depth, 1);
