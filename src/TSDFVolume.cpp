@@ -5,6 +5,7 @@
 
 #include "MarchingCubes.h"
 #include "Volume.h"
+
 TSDFVolume::TSDFVolume(int width, int height, int depth, float voxelSize)
     : width(width), height(height), depth(depth), voxelSize(voxelSize) {
     voxels.resize(width * height * depth);
@@ -82,7 +83,8 @@ void TSDFVolume::integrate(const PointCloud& pointCloud,
 void TSDFVolume::storeAsOff(const std::string& filenameBaseOut) {
     std::stringstream ss;
     ss << filenameBaseOut << "tsdf_volume.off";
-    std::cout << "Storing TSDFVolume as OFF at: " << ss.str() << "..." << std::endl;
+    std::cout << "Storing TSDFVolume as OFF at: " << ss.str() << "..."
+              << std::endl;
 
     // convert our TSDF to Volume
     Volume vol(Vector3d(-0.1, -0.1, -0.1), Vector3d(1.1, 1.1, 1.1), width,
