@@ -147,7 +147,7 @@ int main(int argc, char *argv[]) {
             resolution = result["resolution"].as<int>();
         }
 
-        float voxelSize = 0.005f;  // meters
+        float voxelSize = 0.001f;  // meters
         if (result.count("voxel")) {
             voxelSize = result["voxel"].as<float>();
         }
