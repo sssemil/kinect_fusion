@@ -12,7 +12,7 @@ struct Coord {
 };
 
 class TSDFVolume {
-public:
+   public:
     TSDFVolume(int width, int height, int depth, float voxelSize);
 
     struct Voxel {
