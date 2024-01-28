@@ -11,6 +11,9 @@ set(glog_DIR ${LIBRARY_DIR}/glog-lib/lib/cmake/glog CACHE PATH "Path to installe
 set(Ceres_DIR ${LIBRARY_DIR}/Ceres/CMake CACHE PATH "Path to installed Ceres")
 set(Flann_INCLUDE_DIR ${LIBRARY_DIR}/Flann-1.8.4/ CACHE PATH "Path to Flann source folder")
 
+# Set USE_CUDA for Ceres
+set(USE_CUDA ON CACHE BOOL "Use CUDA in Ceres")
+
 ## OpenCV Integration
 # Optional: Set OpenCV_DIR if you want to use a custom version of OpenCV
 # SET("OpenCV_DIR" "/opt/opencv/usr/local/share/OpenCV")
@@ -39,11 +42,12 @@ set(PROJECT_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
 
 file(GLOB_RECURSE HEADER_FILES "${PROJECT_INCLUDE_DIR}/*.h")
 file(GLOB_RECURSE SOURCE_FILES "${PROJECT_SOURCE_DIR}/*.cpp")
+list(REMOVE_ITEM SOURCE_FILES "${PROJECT_SOURCE_DIR}/main.cpp")
 
 link_directories(${FreeImage_LIBRARY_DIR})
 
 # Executable and Linking
-add_executable(main ${SOURCE_FILES} ${HEADER_FILES})
+add_executable(main "${PROJECT_SOURCE_DIR}/main.cpp" ${SOURCE_FILES} ${HEADER_FILES})
 target_include_directories(main PUBLIC
         ${EIGEN3_INCLUDE_DIR}
         ${OpenCV_INCLUDE_DIRS}
