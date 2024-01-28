@@ -30,7 +30,8 @@ int logMesh(VirtualSensor &sensor, const Matrix4f &currentCameraPose,
     return 0;
 }
 
-int run(const std::string &datasetPath, const std::string &filenameBaseOut, int resolution, float voxelSize) {
+int run(const std::string &datasetPath, const std::string &filenameBaseOut,
+        int resolution, float voxelSize) {
     // load video
     std::cout << "Initialize virtual sensor..." << std::endl;
     VirtualSensor sensor;
@@ -65,26 +66,28 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut, int 
     // Build TSDF using the first frame
     tsdfVolume.integrate(target, 0.1f);
 
-    /*int i = 0;
+    int i = 0;
     const int iMax = 10;
-    while (sensor.processNextFrame() && i <= iMax) {
+    while (sensor.processNextFrame() && i < iMax) {
         Matrix3f depthIntrinsics = sensor.getDepthIntrinsics();
         Matrix4f depthExtrinsics = sensor.getDepthExtrinsics();
 
         // Estimate the current camera pose from source to target mesh with ICP
         // optimization. We downsample the source image to speed up the
         // correspondence matching.
-//        PointCloud source{sensor.getDepth(),
-//                          sensor.getDepthIntrinsics(),
-//                          sensor.getDepthExtrinsics(),
-//                          sensor.getDepthImageWidth(),
-//                          sensor.getDepthImageHeight(),
-//                          8};
+        PointCloud source{sensor.getDepth(),
+                          sensor.getDepthIntrinsics(),
+                          sensor.getDepthExtrinsics(),
+                          sensor.getDepthImageWidth(),
+                          sensor.getDepthImageHeight(),
+                          8};
 
-        PointCloud source = ray_marching(tsdfVolume, sensor, estimatedPoses.back());
-
-        // TODO: Track camera pose and then get the target image from the TSDF from that pose.
+        // TODO: Track camera pose and then get the target image from the TSDF
+        // from that pose.
         // TODO: Replace target with a raycasted image from the TSDF volume.
+        // PointCloud target = ray_marching(tsdfVolume, sensor,
+        // estimatedPoses.back());
+
         optimizer->estimatePose(source, target, currentCameraToWorld);
 
         // Invert the transformation matrix to get the current camera pose.
@@ -96,17 +99,21 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut, int 
         Matrix4f cameraToWorld = currentCameraPose.inverse();
         tsdfVolume.integrate(source, 0.1f);
 
-        if (i % 10 == 0) {
-            if (logMesh(sensor, currentCameraPose, filenameBaseOut) != 0) {
-                return -1;
-            }
-        }
+        // Replace target (reference frame) with source (current) frame
+        target = source;
+
+        // if (i % 10 == 0) {
+        //     if (logMesh(sensor, currentCameraPose, filenameBaseOut) !=
+        //     0) {
+        //         return -1;
+        //     }
+        // }
 
         i++;
-    }*/
+    }
 
     // Building an SDF of a sphere manually
-//    TSDFVolume tsdfVolume = TSDFVolume::buildSphere();
+    // TSDFVolume tsdfVolume = TSDFVolume::buildSphere();
 
     tsdfVolume.storeAsOff(filenameBaseOut);
 
