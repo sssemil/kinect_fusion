@@ -1,10 +1,10 @@
 #include "TSDFVolume.h"
 
+#include <chrono>
 #include <stdexcept>
 
 #include "MarchingCubes.h"
 #include "Volume.h"
-
 TSDFVolume::TSDFVolume(int width, int height, int depth, float voxelSize)
     : width(width), height(height), depth(depth), voxelSize(voxelSize) {
     voxels.resize(width * height * depth);
@@ -95,13 +95,20 @@ void TSDFVolume::storeAsOff(const std::string& filenameBaseOut) {
     }
 
     // extract the zero iso-surface using marching cubes
+
     SimpleMesh mesh;
+
+    // Count duration of marching cubes
+    auto start = std::chrono::high_resolution_clock::now();
+
     for (unsigned int x = 0; x < vol.getDimX() - 1; x++)
     {
-        if (x % 100 == 0) {
-            std::cout << "Marching Cubes on slice " << x << " of "
-                      << vol.getDimX() << std::endl;
-        }
+        auto intermittent_end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = intermittent_end - start;
+        auto it_per_sec = x / elapsed.count();
+        printf("\rMarching Cubes on slice %d of %d (%0.2f seconds) [%0.2f it/s]",
+               x, vol.getDimX(), elapsed.count(), it_per_sec);
+        fflush(stdout);
 
 #pragma omp parallel for
         for (unsigned int y = 0; y < vol.getDimY() - 1; y++)
@@ -112,6 +119,11 @@ void TSDFVolume::storeAsOff(const std::string& filenameBaseOut) {
             }
         }
     }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "Marching Cubes took " << elapsed.count() << " seconds."
+              << std::endl;
 
     // write mesh to file
     std::cout << "Writing mesh to file: " << ss.str() << std::endl;
