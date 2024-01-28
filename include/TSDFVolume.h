@@ -2,6 +2,8 @@
 
 #include <Eigen/Dense>
 #include <vector>
+#include <cuda.h>
+#include<cuda_runtime.h>
 
 #include "PointCloud.h"
 
@@ -25,7 +27,18 @@ class TSDFVolume {
     Voxel& getVoxel(int x, int y, int z);
     const Voxel& getVoxel(int x, int y, int z) const;
 
-    void integrate(const PointCloud& pointCloud, float truncationDistance);
+    namespace cuda{
+        void integrate(const float* points,
+                          const float* normals,
+                          size_t pointCloudSize,
+                          float truncationDistance,
+                          Voxel* voxels,
+                          int width, int height, int depth,
+                          float voxelSize);
+    }
+
+    integrate(const PointCloud& pointCloud,
+                           float truncationDistance);
 
     void storeAsOff(const std::string& filenameBaseOut);
 

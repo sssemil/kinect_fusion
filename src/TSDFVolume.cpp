@@ -38,41 +38,79 @@ const TSDFVolume::Voxel& TSDFVolume::getVoxel(int x, int y, int z) const {
     return voxels[toLinearIndex(x, y, z)];
 }
 
+// void TSDFVolume::integrate(const PointCloud& pointCloud,
+//                            float truncationDistance) {
+//     // Iterate over each point in the PointCloud
+//     const auto& points = pointCloud.getPoints();
+//     const auto& normals = pointCloud.getNormals();
+
+//     for (size_t i = 0; i < points.size(); ++i) {
+//         const Eigen::Vector3f& point = points[i];
+//         const Eigen::Vector3f& normal = normals[i];
+
+//         // Transform point to TSDF grid coordinates
+//         //Eigen::Vector3i voxelCoord = (point / voxelSize).cast<int>();
+//         Eigen::Vector3i voxelCoord = ((point + Eigen::Vector3f(2, 2, 2)) / 4.0 * width).cast<int>();
+
+//         // Update voxel if within TSDF volume bounds
+//         if (voxelCoord[0] >= 0 && voxelCoord[0] < width
+//             && voxelCoord[1] >= 0 && voxelCoord[1] < height
+//             && voxelCoord[2] >= 0 && voxelCoord[2] < depth) {
+//             int index =
+//                 toLinearIndex(voxelCoord[0], voxelCoord[1], voxelCoord[2]);
+//             Voxel& voxel = voxels[index];
+
+//             // Compute signed distance and update voxel
+//             float sdf =
+//                 normal.dot(point - voxelCoord.cast<float>() * voxelSize);
+//             sdf = std::min(std::max(sdf, -truncationDistance),
+//                            truncationDistance);
+
+//             // Weighted average update
+//             float wNew = 1.0;  // Example: constant weight
+//             voxel.distance = (voxel.distance * voxel.weight + sdf * wNew) /
+//                              (voxel.weight + wNew);
+//             voxel.weight += wNew;
+//         }
+//     }
+// }
+
 void TSDFVolume::integrate(const PointCloud& pointCloud,
                            float truncationDistance) {
-    // Iterate over each point in the PointCloud
-    const auto& points = pointCloud.getPoints();
-    const auto& normals = pointCloud.getNormals();
+    // Allocate memory for voxels on the device
+    Voxel* d_voxels;
+    cudaMalloc(&d_voxels, width * height * depth * sizeof(Voxel));
 
-    for (size_t i = 0; i < points.size(); ++i) {
-        const Eigen::Vector3f& point = points[i];
-        const Eigen::Vector3f& normal = normals[i];
+    // Transfer point cloud data to the device
+    float* d_points;
+    float* d_normals;
+    cudaMalloc(&d_points, pointCloud.size() * 3 * sizeof(float));
+    cudaMalloc(&d_normals, pointCloud.size() * 3 * sizeof(float));
+    cudaMemcpy(d_points, pointCloud.getPoints(), pointCloud.size() * 3 * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_normals, pointCloud.getNormals(), pointCloud.size() * 3 * sizeof(float), cudaMemcpyHostToDevice);
 
-        // Transform point to TSDF grid coordinates
-        //Eigen::Vector3i voxelCoord = (point / voxelSize).cast<int>();
-        Eigen::Vector3i voxelCoord = ((point + Eigen::Vector3f(2, 2, 2)) / 4.0 * width).cast<int>();
+    // Define grid and block dimensions
+    dim3 blockSize(256); // Adjust according to your device capabilities
+    dim3 gridSize((pointCloud.size() + blockSize.x - 1) / blockSize.x);
 
-        // Update voxel if within TSDF volume bounds
-        if (voxelCoord[0] >= 0 && voxelCoord[0] < width
-            && voxelCoord[1] >= 0 && voxelCoord[1] < height
-            && voxelCoord[2] >= 0 && voxelCoord[2] < depth) {
-            int index =
-                toLinearIndex(voxelCoord[0], voxelCoord[1], voxelCoord[2]);
-            Voxel& voxel = voxels[index];
+    // Launch the CUDA kernel
+    integrate<<<gridSize, blockSize>>>(d_points, d_normals, pointCloud.size(), truncationDistance,
+                                       d_voxels, width, height, depth, voxelSize);
 
-            // Compute signed distance and update voxel
-            float sdf =
-                normal.dot(point - voxelCoord.cast<float>() * voxelSize);
-            sdf = std::min(std::max(sdf, -truncationDistance),
-                           truncationDistance);
+    // Copy the result back to host
+    Voxel* h_voxels = new Voxel[width * height * depth];
+    cudaMemcpy(h_voxels, d_voxels, width * height * depth * sizeof(Voxel), cudaMemcpyDeviceToHost);
 
-            // Weighted average update
-            float wNew = 1.0;  // Example: constant weight
-            voxel.distance = (voxel.distance * voxel.weight + sdf * wNew) /
-                             (voxel.weight + wNew);
-            voxel.weight += wNew;
-        }
-    }
+    // Free device memory
+    cudaFree(d_voxels);
+    cudaFree(d_points);
+    cudaFree(d_normals);
+
+    // Do something with h_voxels...
+    voxels = std::vector<Voxel>(h_voxels, h_voxels + width * height * depth);
+
+    // Free host memory
+    delete[] h_voxels;
 }
 
 void TSDFVolume::storeAsOff(const std::string& filenameBaseOut) {
