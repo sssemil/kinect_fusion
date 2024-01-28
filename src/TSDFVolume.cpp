@@ -2,6 +2,9 @@
 
 #include <stdexcept>
 
+#include "MarchingCubes.h"
+#include "Volume.h"
+
 TSDFVolume::TSDFVolume(int width, int height, int depth, float voxelSize)
     : width(width), height(height), depth(depth), voxelSize(voxelSize) {
     voxels.resize(width * height * depth);
@@ -62,12 +65,50 @@ void TSDFVolume::storeAsOff(const std::string& filenameBaseOut) {
     std::stringstream ss;
     ss << filenameBaseOut << "tsdf_volume.off";
     std::cout << "TSDFVolume stored as OFF at: " << ss.str() << std::endl;
-    std::ofstream file(ss.str());
-    file << "OFF" << std::endl;
-    file << width << " " << height << " " << depth << std::endl;
-    for (unsigned int i = 0; i < voxels.size(); ++i) {
-        auto xyz = fromLinearIndex(i);
-        file << xyz.x << " " << xyz.y << " " << xyz.z << std::endl;
+//    std::ofstream file(ss.str());
+//    file << "OFF" << std::endl;
+//    file << width << " " << height << " " << depth << std::endl;
+//    for (unsigned int i = 0; i < voxels.size(); ++i) {
+//        auto xyz = fromLinearIndex(i);
+//        // TODO: this isn't exporting the TSDF, it's just iterating over the coordinates
+//        file << xyz.x << " " << xyz.y << " " << xyz.z << std::endl;
+//    }
+//
+//    file.close();
+
+    // convert our TSDF to Volume
+    unsigned int mc_res = 512; // resolution of the grid, for debugging you can reduce the resolution (-> faster)
+    Volume vol(Vector3d(-0.1,-0.1,-0.1), Vector3d(1.1,1.1,1.1), mc_res, mc_res, mc_res, 1);
+    for (unsigned int x = 0; x < vol.getDimX(); x++)
+    {
+        for (unsigned int y = 0; y < vol.getDimY(); y++)
+        {
+            for (unsigned int z = 0; z < vol.getDimZ(); z++)
+            {
+                Voxel vox = getVoxel(x, y, z);
+                vol.set(x,y,z, vox.distance);
+            }
+        }
     }
-    file.close();
+
+    // extract the zero iso-surface using marching cubes
+    SimpleMesh mesh;
+    for (unsigned int x = 0; x < vol.getDimX() - 1; x++)
+    {
+        std::cerr << "Marching Cubes on slice " << x << " of " << vol.getDimX() << std::endl;
+
+        for (unsigned int y = 0; y < vol.getDimY() - 1; y++)
+        {
+            for (unsigned int z = 0; z < vol.getDimZ() - 1; z++)
+            {
+                ProcessVolumeCell(&vol, x, y, z, 0.00f, &mesh);
+            }
+        }
+    }
+
+    // write mesh to file
+    if (!mesh.writeMesh(ss.str()))
+    {
+        std::cout << "ERROR: unable to write output file!" << std::endl;
+    }
 }
