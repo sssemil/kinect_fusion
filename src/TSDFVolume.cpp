@@ -124,6 +124,7 @@ void TSDFVolume::storeAsOff(const std::string& filenameBaseOut) {
     }
 
     // write mesh to file
+    std::cout << "Writing mesh to file: " << ss.str() << std::endl;
     if (!mesh.writeMesh(ss.str()))
     {
         std::cout << "ERROR: unable to write output file!" << std::endl;
