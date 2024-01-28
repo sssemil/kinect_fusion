@@ -30,7 +30,7 @@ int logMesh(VirtualSensor &sensor, const Matrix4f &currentCameraPose,
     return 0;
 }
 
-int run(const std::string &datasetPath, const std::string &filenameBaseOut) {
+int run(const std::string &datasetPath, const std::string &filenameBaseOut, int resolution, float voxelSize) {
     // load video
     std::cout << "Initialize virtual sensor..." << std::endl;
     VirtualSensor sensor;
@@ -60,11 +60,12 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut) {
     estimatedPoses.emplace_back(currentCameraToWorld.inverse());
 
     // Define the dimensions and resolution of the TSDF volume
-    auto resolution = 512;
-    float voxelSize = 0.005f;  // meters
     TSDFVolume tsdfVolume(resolution, resolution, resolution, voxelSize);
 
-    int i = 0;
+    // Build TSDF using the first frame
+    tsdfVolume.integrate(target, 0.1f);
+
+    /*int i = 0;
     const int iMax = 10;
     while (sensor.processNextFrame() && i <= iMax) {
         Matrix3f depthIntrinsics = sensor.getDepthIntrinsics();
@@ -73,12 +74,15 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut) {
         // Estimate the current camera pose from source to target mesh with ICP
         // optimization. We downsample the source image to speed up the
         // correspondence matching.
-        PointCloud source{sensor.getDepth(),
-                          sensor.getDepthIntrinsics(),
-                          sensor.getDepthExtrinsics(),
-                          sensor.getDepthImageWidth(),
-                          sensor.getDepthImageHeight(),
-                          8};
+//        PointCloud source{sensor.getDepth(),
+//                          sensor.getDepthIntrinsics(),
+//                          sensor.getDepthExtrinsics(),
+//                          sensor.getDepthImageWidth(),
+//                          sensor.getDepthImageHeight(),
+//                          8};
+
+        PointCloud source = ray_marching(tsdfVolume, sensor, estimatedPoses.back());
+
         // TODO: Track camera pose and then get the target image from the TSDF from that pose.
         // TODO: Replace target with a raycasted image from the TSDF volume.
         optimizer->estimatePose(source, target, currentCameraToWorld);
@@ -99,7 +103,10 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut) {
         }
 
         i++;
-    }
+    }*/
+
+    // Building an SDF of a sphere manually
+//    TSDFVolume tsdfVolume = TSDFVolume::buildSphere();
 
     tsdfVolume.storeAsOff(filenameBaseOut);
 
@@ -114,6 +121,8 @@ int main(int argc, char *argv[]) {
         options.allow_unrecognised_options().add_options()(
             "d,dataset", "Path to the dataset", cxxopts::value<std::string>())(
             "o,output", "Base output filename", cxxopts::value<std::string>())(
+            "r,resolution", "TSDF resolution", cxxopts::value<int>())(
+            "v,voxel", "TSDF voxel size", cxxopts::value<float>())(
             "h,help", "Print help");
 
         auto result = options.parse(argc, argv);
@@ -133,10 +142,20 @@ int main(int argc, char *argv[]) {
             filenameBaseOut = result["output"].as<std::string>();
         }
 
+        int resolution = 512;
+        if (result.count("resolution")) {
+            resolution = result["resolution"].as<int>();
+        }
+
+        float voxelSize = 0.005f;  // meters
+        if (result.count("voxel")) {
+            voxelSize = result["voxel"].as<float>();
+        }
+
         std::cout << "Dataset Path: " << datasetPath << std::endl;
         std::cout << "Base Output Filename: " << filenameBaseOut << std::endl;
 
-        return run(datasetPath, filenameBaseOut);
+        return run(datasetPath, filenameBaseOut, resolution, voxelSize);
     } catch (cxxopts::exceptions::option_has_no_value &ex) {
         std::cerr << ex.what() << "\n";
         return 1;

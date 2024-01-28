@@ -11,6 +11,19 @@ TSDFVolume::TSDFVolume(int width, int height, int depth, float voxelSize)
     std::fill(voxels.begin(), voxels.end(), Voxel());
 }
 
+TSDFVolume TSDFVolume::buildSphere() {
+    float radius = 4.f;
+    TSDFVolume tsdf(10, 10, 10, 1);
+    for (int x = 0; x < tsdf.width; x++) {
+        for (int y = 0; y < tsdf.height; y++) {
+            for (int z = 0; z < tsdf.depth; z++) {
+                tsdf.getVoxel(x, y, z).distance = pow(x - tsdf.width / 2.f, 2) + pow(y - tsdf.height / 2.f, 2) + pow(z - tsdf.depth / 2.f, 2) - pow(radius, 2);
+            }
+        }
+    }
+    return tsdf;
+}
+
 TSDFVolume::Voxel& TSDFVolume::getVoxel(int x, int y, int z) {
     if (x < 0 || x >= width || y < 0 || y >= height || z < 0 || z >= depth) {
         throw std::out_of_range("Voxel coordinates are out of bounds");
@@ -36,12 +49,13 @@ void TSDFVolume::integrate(const PointCloud& pointCloud,
         const Eigen::Vector3f& normal = normals[i];
 
         // Transform point to TSDF grid coordinates
-        Eigen::Vector3i voxelCoord = (point / voxelSize).cast<int>();
+        //Eigen::Vector3i voxelCoord = (point / voxelSize).cast<int>();
+        Eigen::Vector3i voxelCoord = ((point + Eigen::Vector3f(2, 2, 2)) / 4.0 * width).cast<int>();
 
         // Update voxel if within TSDF volume bounds
-        if (voxelCoord[0] >= 0 && voxelCoord[0] < width && voxelCoord[1] >= 0 &&
-            voxelCoord[1] < height && voxelCoord[2] >= 0 &&
-            voxelCoord[2] < depth) {
+        if (voxelCoord[0] >= 0 && voxelCoord[0] < width
+            && voxelCoord[1] >= 0 && voxelCoord[1] < height
+            && voxelCoord[2] >= 0 && voxelCoord[2] < depth) {
             int index =
                 toLinearIndex(voxelCoord[0], voxelCoord[1], voxelCoord[2]);
             Voxel& voxel = voxels[index];
@@ -77,8 +91,7 @@ void TSDFVolume::storeAsOff(const std::string& filenameBaseOut) {
 //    file.close();
 
     // convert our TSDF to Volume
-    unsigned int mc_res = 512; // resolution of the grid, for debugging you can reduce the resolution (-> faster)
-    Volume vol(Vector3d(-0.1,-0.1,-0.1), Vector3d(1.1,1.1,1.1), mc_res, mc_res, mc_res, 1);
+    Volume vol(Vector3d(-0.1,-0.1,-0.1), Vector3d(1.1,1.1,1.1), width, height, depth, 1);
     for (unsigned int x = 0; x < vol.getDimX(); x++)
     {
         for (unsigned int y = 0; y < vol.getDimY(); y++)
@@ -95,8 +108,12 @@ void TSDFVolume::storeAsOff(const std::string& filenameBaseOut) {
     SimpleMesh mesh;
     for (unsigned int x = 0; x < vol.getDimX() - 1; x++)
     {
-        std::cerr << "Marching Cubes on slice " << x << " of " << vol.getDimX() << std::endl;
+        if (x % 100 == 0) {
+            std::cout << "Marching Cubes on slice " << x << " of "
+                      << vol.getDimX() << std::endl;
+        }
 
+#pragma omp parallel for
         for (unsigned int y = 0; y < vol.getDimY() - 1; y++)
         {
             for (unsigned int z = 0; z < vol.getDimZ() - 1; z++)

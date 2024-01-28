@@ -29,6 +29,8 @@ class TSDFVolume {
 
     void storeAsOff(const std::string& filenameBaseOut);
 
+    static TSDFVolume buildSphere();
+
    private:
     std::vector<Voxel> voxels;
     int width, height, depth;
