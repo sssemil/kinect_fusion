@@ -82,7 +82,7 @@ void TSDFVolume::integrate(const PointCloud& pointCloud,
 void TSDFVolume::storeAsOff(const std::string& filenameBaseOut) {
     std::stringstream ss;
     ss << filenameBaseOut << "tsdf_volume.off";
-    std::cout << "TSDFVolume stored as OFF at: " << ss.str() << std::endl;
+    std::cout << "Storing TSDFVolume as OFF at: " << ss.str() << "..." << std::endl;
 
     // convert our TSDF to Volume
     Volume vol(Vector3d(-0.1, -0.1, -0.1), Vector3d(1.1, 1.1, 1.1), width,
@@ -119,6 +119,7 @@ void TSDFVolume::storeAsOff(const std::string& filenameBaseOut) {
             }
         }
     }
+    printf("\n");
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
