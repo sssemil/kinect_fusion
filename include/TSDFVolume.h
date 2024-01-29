@@ -25,7 +25,7 @@ class TSDFVolume {
     Voxel& getVoxel(int x, int y, int z);
     const Voxel& getVoxel(int x, int y, int z) const;
 
-    void integrate(const PointCloud& pointCloud, float truncationDistance);
+    void integrate(const PointCloud& pointCloud, const Eigen::Matrix4f& pose, float truncationDistance);
 
     void storeAsOff(const std::string& filenameBaseOut);
 

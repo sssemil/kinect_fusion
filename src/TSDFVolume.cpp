@@ -43,17 +43,21 @@ const TSDFVolume::Voxel& TSDFVolume::getVoxel(int x, int y, int z) const {
 }
 
 void TSDFVolume::integrate(const PointCloud& pointCloud,
+                           const Eigen::Matrix4f& pose,
                            float truncationDistance) {
+    // Camera transformation
+    const Eigen::Affine3f transform(pose);
+
     // Iterate over each point in the PointCloud
     const auto& points = pointCloud.getPoints();
     const auto& normals = pointCloud.getNormals();
 
     for (size_t i = 0; i < points.size(); ++i) {
-        const Eigen::Vector3f& point = points[i];
-        const Eigen::Vector3f& normal = normals[i];
+        Eigen::Vector3f point = transform * points[i];
+        Eigen::Vector3f normal = transform * normals[i];
 
         // Transform point to TSDF grid coordinates
-        // Eigen::Vector3i voxelCoord = (point / voxelSize).cast<int>();
+        // TODO: find the exact relationship between voxelSize and the SDF dimensions
         Eigen::Vector3i voxelCoord =
             ((point + Eigen::Vector3f(2, 2, 2)) / 4.0 * width).cast<int>();
 
