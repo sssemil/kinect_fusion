@@ -7,7 +7,6 @@
 #include "SimpleMesh.h"
 #include "TSDFVolume.h"
 #include "VirtualSensor.h"
-#include "cxxopts.hpp"
 
 #define LEVEL 3
 
@@ -71,6 +70,7 @@ std::vector<PointCloud> createPointClouds(VirtualSensor &sensor) {
         sensor.getDepthIntrinsics()(0, 2),
         sensor.getDepthIntrinsics()(1, 2)};
     std::vector<PointCloud> current;
+    std::cout << "Create PointClouds..." << std::endl;
     for (int i = 0; i < LEVEL; i++) {
         CameraParams tmp = cameraParameters.cameraParametersByLevel(i);
         Eigen::Matrix3f instrinsic = Eigen::Matrix3f::Identity();
@@ -79,6 +79,8 @@ std::vector<PointCloud> createPointClouds(VirtualSensor &sensor) {
         instrinsic(0, 2) = tmp.principal_x;
         instrinsic(1, 2) = tmp.principal_y;
         instrinsic(2, 2) = 1;
+        std::cout << sensor.getDepth()[10] << std::endl;
+
         PointCloud tmpPointCloud{sensor.getDepth(),
                                  instrinsic,
                                  sensor.getDepthExtrinsics(),
@@ -87,6 +89,8 @@ std::vector<PointCloud> createPointClouds(VirtualSensor &sensor) {
                                  static_cast<unsigned int>(8 >> i)};
         current.push_back(tmpPointCloud);
     }
+    std::cout << "PointClouds created..." << std::endl;
+
 }
 
 int run(const std::string &datasetPath, const std::string &filenameBaseOut,
@@ -123,9 +127,12 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
 
     // Define the dimensions and resolution of the TSDF volume
     TSDFVolume tsdfVolume(resolution, resolution, resolution, voxelSize);
-
+    std::cout << "Integrate tsdfVolume..." << std::endl;
     // Build TSDF using the first frame
+    std::cout << target[0].getPoints()[0] << std::endl;
     tsdfVolume.integrate(target[0], 0.1f);
+    std::cout << "tsdfVolume integrated..." << std::endl;
+
 
     bool isFirst = true;
 
@@ -191,48 +198,37 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
 }
 
 int main(int argc, char *argv[]) {
-    try {
-        cxxopts::Options options(argv[0], " - command line options");
-        options.allow_unrecognised_options().add_options()(
-            "d,dataset", "Path to the dataset", cxxopts::value<std::string>())(
-            "o,output", "Base output filename", cxxopts::value<std::string>())(
-            "r,resolution", "TSDF resolution", cxxopts::value<int>())(
-            "v,voxel", "TSDF voxel size", cxxopts::value<float>())(
-            "h,help", "Print help");
+   // try {
+        // cxxopts::Options options(argv[0], " - command line options");
+        // options.allow_unrecognised_options().add_options()(
+        //     "d,dataset", "Path to the dataset", cxxopts::value<std::string>())(
+        //     "o,output", "Base output filename", cxxopts::value<std::string>())(
+        //     "r,resolution", "TSDF resolution", cxxopts::value<int>())(
+        //     "v,voxel", "TSDF voxel size", cxxopts::value<float>())(
+        //     "h,help", "Print help");
 
-        auto result = options.parse(argc, argv);
+        // auto result = options.parse(argc, argv);
 
-        if (result.count("help")) {
-            std::cout << options.help() << std::endl;
-            return 0;
-        }
+        // if (result.count("help")) {
+        //     std::cout << options.help() << std::endl;
+        //     return 0;
+        // }
 
-        std::string datasetPath = "../Data/rgbd_dataset_freiburg1_xyz/";
-        if (result.count("dataset")) {
-            datasetPath = result["dataset"].as<std::string>();
-        }
-
+        std::string datasetPath = "../data/rgbd_dataset_freiburg1_xyz/";
+   
         std::string filenameBaseOut = "mesh_";
-        if (result.count("output")) {
-            filenameBaseOut = result["output"].as<std::string>();
-        }
+   
 
         int resolution = 512;
-        if (result.count("resolution")) {
-            resolution = result["resolution"].as<int>();
-        }
+     
 
         float voxelSize = 0.001f;  // meters
-        if (result.count("voxel")) {
-            voxelSize = result["voxel"].as<float>();
-        }
-
+     
         std::cout << "Dataset Path: " << datasetPath << std::endl;
         std::cout << "Base Output Filename: " << filenameBaseOut << std::endl;
-
-        return run(datasetPath, filenameBaseOut, resolution, voxelSize);
-    } catch (cxxopts::exceptions::option_has_no_value &ex) {
-        std::cerr << ex.what() << "\n";
-        return 1;
-    }
+       return run(datasetPath, filenameBaseOut, resolution, voxelSize);
+    // } catch (cxxopts::exceptions::option_has_no_value &ex) {
+    //     std::cerr << ex.what() << "\n";
+    //     return 1;
+    // }
 }

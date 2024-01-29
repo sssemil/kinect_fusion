@@ -17,7 +17,7 @@ set(USE_CUDA ON CACHE BOOL "Use CUDA in Ceres")
 ## OpenCV Integration
 # Optional: Set OpenCV_DIR if you want to use a custom version of OpenCV
 # SET("OpenCV_DIR" "/opt/opencv/usr/local/share/OpenCV")
-find_package(OpenCV 3.0 REQUIRED)
+find_package(OpenCV 4.9.0 REQUIRED)
 if (OpenCV_INCLUDE_DIRS)
     include_directories("${OpenCV_INCLUDE_DIRS}")
     link_directories(${OpenCV_DIR}/lib)
@@ -28,7 +28,8 @@ find_package(Eigen3 REQUIRED)
 if (EIGEN3_INCLUDE_DIR)
     include_directories("${EIGEN3_INCLUDE_DIR}")
 endif ()
-
+find_library(LZ4_LIBRARIES NAMES liblz4.so HINTS "lz4/lib")
+link_libraries(${LZ4_LIBRARIES})
 find_package(Ceres REQUIRED)
 find_package(glog REQUIRED)
 get_target_property(GLOG_DLL_PATH_DEBUG glog::glog IMPORTED_LOCATION_DEBUG)
