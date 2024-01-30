@@ -13,7 +13,9 @@ struct Coord {
 
 class TSDFVolume {
    public:
-    TSDFVolume(int width, int height, int depth, float voxelSize);
+
+    TSDFVolume(float size, int resolution, Vector3f offset = Vector3f());
+    TSDFVolume(int width, int height, int depth, float voxelSize, Vector3f offset = Vector3f());
 
     struct Voxel {
         float distance;
@@ -25,6 +27,9 @@ class TSDFVolume {
     Voxel& getVoxel(int x, int y, int z);
     const Voxel& getVoxel(int x, int y, int z) const;
 
+//    Voxel& getVoxelCoordinatesForWorldCoordinates(const Vector3f& pos);
+    Vector3i getVoxelCoordinatesForWorldCoordinates(const Vector3f& pos) const;
+
     void integrate(const PointCloud& pointCloud, const Eigen::Matrix4f& pose, float truncationDistance);
 
     void storeAsOff(const std::string& filenameBaseOut);
@@ -34,7 +39,8 @@ class TSDFVolume {
    private:
     std::vector<Voxel> voxels;
     int width, height, depth;
-    float voxelSize;
+    const Vector3f offset;
+    const float voxelSize;
 
     inline int toLinearIndex(int x, int y, int z) const {
         return x + width * (y + height * z);

@@ -31,7 +31,7 @@ int logMesh(VirtualSensor &sensor, const Matrix4f &currentCameraPose,
 }
 
 int run(const std::string &datasetPath, const std::string &filenameBaseOut,
-        int resolution, float voxelSize) {
+        float size, int resolution, Vector3f offset) {
     // load video
     std::cout << "Initialize virtual sensor..." << std::endl;
     VirtualSensor sensor;
@@ -61,7 +61,8 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
     estimatedPoses.emplace_back(currentCameraToWorld.inverse());
 
     // Define the dimensions and resolution of the TSDF volume
-    TSDFVolume tsdfVolume(resolution, resolution, resolution, voxelSize);
+    TSDFVolume tsdfVolume(size, resolution, offset);
+    // TSDFVolume tsdfVolume(resolution, resolution, resolution, voxelSize);
 
     // Build TSDF using the first frame
     tsdfVolume.integrate(target, currentCameraToWorld, 0.1f);
@@ -129,7 +130,9 @@ int main(int argc, char *argv[]) {
             "d,dataset", "Path to the dataset", cxxopts::value<std::string>())(
             "o,output", "Base output filename", cxxopts::value<std::string>())(
             "r,resolution", "TSDF resolution", cxxopts::value<int>())(
-            "v,voxel", "TSDF voxel size", cxxopts::value<float>())(
+            "x,dx", "X-offset", cxxopts::value<float>())(
+            "y,dy", "Y-offset", cxxopts::value<float>())(
+            "z,dz", "Z-offset", cxxopts::value<float>())(
             "h,help", "Print help");
 
         auto result = options.parse(argc, argv);
@@ -149,20 +152,35 @@ int main(int argc, char *argv[]) {
             filenameBaseOut = result["output"].as<std::string>();
         }
 
+        float size = 4.0f;  // meters
+        if (result.count("size")) {
+            size = result["size"].as<float>();
+        }
+
         int resolution = 512;
         if (result.count("resolution")) {
             resolution = result["resolution"].as<int>();
         }
 
-        float voxelSize = 0.001f;  // meters
-        if (result.count("voxel")) {
-            voxelSize = result["voxel"].as<float>();
+        float dx = 2.f;  // meters
+        if (result.count("dx")) {
+            dx = result["dx"].as<float>();
+        }
+
+        float dy = 2.f;  // meters
+        if (result.count("dy")) {
+            dy = result["dy"].as<float>();
+        }
+
+        float dz = -0.5f;  // meters
+        if (result.count("dz")) {
+            dz = result["dz"].as<float>();
         }
 
         std::cout << "Dataset Path: " << datasetPath << std::endl;
         std::cout << "Base Output Filename: " << filenameBaseOut << std::endl;
 
-        return run(datasetPath, filenameBaseOut, resolution, voxelSize);
+        return run(datasetPath, filenameBaseOut, size, resolution, Vector3f(dx, dy, dz));
     } catch (cxxopts::exceptions::option_has_no_value &ex) {
         std::cerr << ex.what() << "\n";
         return 1;

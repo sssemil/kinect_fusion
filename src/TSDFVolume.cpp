@@ -6,11 +6,14 @@
 #include "MarchingCubes.h"
 #include "Volume.h"
 
-TSDFVolume::TSDFVolume(int width, int height, int depth, float voxelSize)
-    : width(width), height(height), depth(depth), voxelSize(voxelSize) {
+TSDFVolume::TSDFVolume(int width, int height, int depth, float voxelSize, Vector3f offset)
+    : width(width), height(height), depth(depth), voxelSize(voxelSize), offset(offset) {
     voxels.resize(width * height * depth);
     std::fill(voxels.begin(), voxels.end(), Voxel());
 }
+
+TSDFVolume::TSDFVolume(float size, int resolution, Vector3f offset)
+    : TSDFVolume(resolution, resolution, resolution, size / resolution, offset) {}
 
 TSDFVolume TSDFVolume::buildSphere() {
     float radius = 4.f;
@@ -42,6 +45,17 @@ const TSDFVolume::Voxel& TSDFVolume::getVoxel(int x, int y, int z) const {
     return voxels[toLinearIndex(x, y, z)];
 }
 
+//TSDFVolume::Voxel& TSDFVolume::getVoxelCoordinatesForWorldCoordinates(const Vector3f& pos) {
+//    Vector3f halfSize = 0.5f * Vector3f(width, height, depth);
+//    Eigen::Vector3i voxelCoord =
+//        ((pos + offset + halfSize) / voxelSize).cast<int>();
+//    return getVoxel(voxelCoord[0], voxelCoord[1], voxelCoord[2]);
+//}
+
+Vector3i TSDFVolume::getVoxelCoordinatesForWorldCoordinates(const Vector3f& pos) const {
+    return ((pos + offset) / voxelSize).cast<int>();
+}
+
 void TSDFVolume::integrate(const PointCloud& pointCloud,
                            const Eigen::Matrix4f& pose,
                            float truncationDistance) {
@@ -58,8 +72,7 @@ void TSDFVolume::integrate(const PointCloud& pointCloud,
 
         // Transform point to TSDF grid coordinates
         // TODO: find the exact relationship between voxelSize and the SDF dimensions
-        Eigen::Vector3i voxelCoord =
-            ((point + Eigen::Vector3f(2, 2, 2)) / 4.0 * width).cast<int>();
+        Vector3i voxelCoord = getVoxelCoordinatesForWorldCoordinates(point);
 
         // Update voxel if within TSDF volume bounds
         if (voxelCoord[0] >= 0 && voxelCoord[0] < width && voxelCoord[1] >= 0 &&
@@ -70,8 +83,7 @@ void TSDFVolume::integrate(const PointCloud& pointCloud,
             Voxel& voxel = voxels[index];
 
             // Compute signed distance and update voxel
-            float sdf =
-                normal.dot(point - voxelCoord.cast<float>() * voxelSize);
+            float sdf = normal.dot(point);
             sdf = std::min(std::max(sdf, -truncationDistance),
                            truncationDistance);
 
@@ -91,8 +103,9 @@ void TSDFVolume::storeAsOff(const std::string& filenameBaseOut) {
               << std::endl;
 
     // convert our TSDF to Volume
-    Volume vol(Vector3d(-0.1, -0.1, -0.1), Vector3d(1.1, 1.1, 1.1), width,
-               height, depth, 1);
+    Volume vol(Vector3d(-0.1, -0.1, -0.1),
+               Vector3d(1.1, 1.1, 1.1),
+               width, height, depth, 1);
     for (unsigned int x = 0; x < vol.getDimX(); x++) {
         for (unsigned int y = 0; y < vol.getDimY(); y++) {
             for (unsigned int z = 0; z < vol.getDimZ(); z++) {
