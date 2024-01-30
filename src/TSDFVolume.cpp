@@ -54,7 +54,7 @@ void TSDFVolume::integrate(const PointCloud& pointCloud,
 
     for (size_t i = 0; i < points.size(); ++i) {
         Eigen::Vector3f point = transform * points[i];
-        Eigen::Vector3f normal = transform * normals[i];
+        Eigen::Vector3f normal = transform.rotation() * normals[i];
 
         // Transform point to TSDF grid coordinates
         // TODO: find the exact relationship between voxelSize and the SDF dimensions

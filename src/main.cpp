@@ -100,7 +100,7 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
         tsdfVolume.integrate(source, currentCameraToWorld, 0.1f);
 
         // Replace target (reference frame) with source (current) frame
-        target = source;
+        // target = source;
 
         // if (i % 10 == 0) {
         //     if (logMesh(sensor, currentCameraPose, filenameBaseOut) !=
