@@ -4,6 +4,7 @@
 #include "Eigen.h"
 #include "ICPOptimizer.h"
 #include "PointCloud.h"
+#include "RayMarching.h"
 #include "SimpleMesh.h"
 #include "TSDFVolume.h"
 #include "VirtualSensor.h"
@@ -86,8 +87,7 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
         // TODO: Track camera pose and then get the target image from the TSDF
         // from that pose.
         // TODO: Replace target with a raycasted image from the TSDF volume.
-        // PointCloud target = ray_marching(tsdfVolume, sensor,
-        // estimatedPoses.back());
+        target = ray_marching(tsdfVolume, sensor, estimatedPoses.back());
 
         optimizer->estimatePose(source, target, currentCameraToWorld);
 
