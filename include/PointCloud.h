@@ -36,7 +36,7 @@ class PointCloud {
         }
     }
 
-    PointCloud(float* depthMap, const Matrix3f& depthIntrinsics,
+    PointCloud(std::vector<float> depthMap, const Matrix3f& depthIntrinsics,
                const Matrix4f& depthExtrinsics, const unsigned width,
                const unsigned height, unsigned downsampleFactor = 1,
                float maxDistance = 0.1f) {
@@ -62,6 +62,8 @@ class PointCloud {
             for (int u = 0; u < width; ++u) {
                 unsigned int idx = v * width + u;  // linearized index
                 float depth = depthMap[idx];
+                              //  std::cout << "Depth: " << depth <<std::endl;
+
                 if (depth == MINF) {
                     pointsTmp[idx] = Vector3f(MINF, MINF, MINF);
                 } else {

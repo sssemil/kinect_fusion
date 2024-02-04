@@ -8,6 +8,8 @@
 #include "Vertex.h"
 #include "VirtualSensor.h"
 
+
+
 class SimpleMesh {
    public:
     SimpleMesh() = default;
@@ -20,7 +22,7 @@ class SimpleMesh {
         // Get ptr to the current depth frame.
         // Depth is stored in row major (get dimensions via
         // sensor.GetDepthImageWidth() / GetDepthImageHeight()).
-        float* depthMap = sensor.getDepth();
+        std::vector<float> depthMap = sensor.getDepth();
         // Get ptr to the current color frame.
         // Color is stored as RGBX in row major (4 byte values per pixel, get
         // dimensions via sensor.GetColorImageWidth() / GetColorImageHeight()).

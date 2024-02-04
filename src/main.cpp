@@ -8,37 +8,42 @@
 #include "TSDFVolume.h"
 #include "VirtualSensor.h"
 
-#define LEVEL 3
+std::vector<int> iterations{2,5};
 
-struct CameraParams {
-    int image_width, image_height;
-    float focal_x, focal_y;
-    float principal_x, principal_y;
+#define LEVEL 2
 
-    CameraParams(int image_width, int image_height, float focal_x,
-                 float focal_y, float principal_x, float principal_y)
-        : image_width(image_width),
-          image_height(image_height),
-          focal_x(focal_x),
-          focal_y(focal_y),
-          principal_x(principal_x),
-          principal_y(principal_y) {}
+std::vector<PointCloud> createPointClouds(VirtualSensor& sensor, int level) {
+    std::vector<PointCloud> current;
+    std::vector<float> depthMap = sensor.getDepth();
+    CameraParams cameraParameters{
+        static_cast<int>(sensor.getDepthImageWidth()),
+        static_cast<int>(sensor.getDepthImageHeight()),
+        sensor.getDepthIntrinsics()(0, 0),
+        sensor.getDepthIntrinsics()(1, 1),
+        sensor.getDepthIntrinsics()(0, 2),
+        sensor.getDepthIntrinsics()(1, 2)};
 
-    CameraParams()
-        : image_width(0),
-          image_height(0),
-          focal_x(0),
-          focal_y(0),
-          principal_x(0),
-          principal_y(0) {}
+    std::cout << "Create PointClouds..." << std::endl;
+    for (int i = 0; i < level; i++) {
+        CameraParams tmp = cameraParameters.cameraParametersByLevel(i);
+        Eigen::Matrix3f depthInstrinsic = Eigen::Matrix3f::Identity();
+        depthInstrinsic(0, 0) = tmp.focal_x;
+        depthInstrinsic(1, 1) = tmp.focal_y;
+        depthInstrinsic(0, 2) = tmp.principal_x;
+        depthInstrinsic(1, 2) = tmp.principal_y;
+        depthInstrinsic(2, 2) = 1;
 
-    CameraParams cameraParametersByLevel(int level) const {
-        return CameraParams{
-            image_width >> level,       image_height >> level,
-            focal_x / (1 << level),     focal_y / (1 << level),
-            principal_x / (1 << level), principal_y / (1 << level)};
+        PointCloud tmpPointCloud{depthMap,
+                                depthInstrinsic,
+                                sensor.getDepthExtrinsics(),
+                                static_cast<unsigned int>(tmp.image_width),
+                                static_cast<unsigned int>(tmp.image_height)};
+        current.push_back(tmpPointCloud);
     }
-};
+    std::cout << "PointClouds created..." << std::endl;
+    return current;
+}
+
 
 int logMesh(VirtualSensor &sensor, const Matrix4f &currentCameraPose,
             const std::string &filenameBaseOut) {
@@ -61,37 +66,7 @@ int logMesh(VirtualSensor &sensor, const Matrix4f &currentCameraPose,
     return 0;
 }
 
-std::vector<PointCloud> createPointClouds(VirtualSensor &sensor) {
-    CameraParams cameraParameters{
-        static_cast<int>(sensor.getDepthImageWidth()),
-        static_cast<int>(sensor.getDepthImageHeight()),
-        sensor.getDepthIntrinsics()(0, 0),
-        sensor.getDepthIntrinsics()(1, 1),
-        sensor.getDepthIntrinsics()(0, 2),
-        sensor.getDepthIntrinsics()(1, 2)};
-    std::vector<PointCloud> current;
-    std::cout << "Create PointClouds..." << std::endl;
-    for (int i = 0; i < LEVEL; i++) {
-        CameraParams tmp = cameraParameters.cameraParametersByLevel(i);
-        Eigen::Matrix3f instrinsic = Eigen::Matrix3f::Identity();
-        instrinsic(0, 0) = tmp.focal_x;
-        instrinsic(1, 1) = tmp.focal_y;
-        instrinsic(0, 2) = tmp.principal_x;
-        instrinsic(1, 2) = tmp.principal_y;
-        instrinsic(2, 2) = 1;
-        std::cout << sensor.getDepth()[10] << std::endl;
 
-        PointCloud tmpPointCloud{sensor.getDepth(),
-                                 instrinsic,
-                                 sensor.getDepthExtrinsics(),
-                                 static_cast<unsigned int>(tmp.image_width),
-                                 static_cast<unsigned int>(tmp.image_height),
-                                 static_cast<unsigned int>(8 >> i)};
-        current.push_back(tmpPointCloud);
-    }
-    std::cout << "PointClouds created..." << std::endl;
-
-}
 
 int run(const std::string &datasetPath, const std::string &filenameBaseOut,
         int resolution, float voxelSize) {
@@ -107,11 +82,7 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
     // We store a first frame as a reference frame. All next frames are tracked
     // relatively to the first frame.
     sensor.processNextFrame();
-    std::vector<PointCloud> target = createPointClouds(sensor);
-    // PointCloud target{sensor.getDepth(), sensor.getDepthIntrinsics(),
-    //                   sensor.getDepthExtrinsics(),
-    //                   sensor.getDepthImageWidth(),
-    //                   sensor.getDepthImageHeight()};
+    std::vector<PointCloud> target = createPointClouds(sensor, LEVEL);
 
     // Setup the optimizer.
     auto optimizer = new CeresICPOptimizer();
@@ -129,30 +100,18 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
     TSDFVolume tsdfVolume(resolution, resolution, resolution, voxelSize);
     std::cout << "Integrate tsdfVolume..." << std::endl;
     // Build TSDF using the first frame
-    std::cout << target[0].getPoints()[0] << std::endl;
-    tsdfVolume.integrate(target[0], 0.1f);
+    tsdfVolume.integrate(target[0], 0.1f);    
     std::cout << "tsdfVolume integrated..." << std::endl;
 
 
-    bool isFirst = true;
-
     int i = 0;
     const int iMax = 10;
-    while (isFirst && sensor.processNextFrame() && i < iMax) {
-        isFirst = false;
-        Matrix3f depthIntrinsics = sensor.getDepthIntrinsics();
-        Matrix4f depthExtrinsics = sensor.getDepthExtrinsics();
-
+    while (sensor.processNextFrame() && i < iMax) {
         // Estimate the current camera pose from source to target mesh with ICP
         // optimization. We downsample the source image to speed up the
         // correspondence matching.
-        std::vector<PointCloud> source = createPointClouds(sensor);
-        // PointCloud source{sensor.getDepth(),
-        //                  sensor.getDepthIntrinsics(),
-        //                  sensor.getDepthExtrinsics(),
-        //                  sensor.getDepthImageWidth(),
-        //                  sensor.getDepthImageHeight(),
-        //                  8};
+        std::vector<PointCloud> source = createPointClouds(sensor, LEVEL);
+      
 
         // TODO: Track camera pose and then get the target image from the TSDF
         // from that pose.
@@ -160,7 +119,8 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
         // PointCloud target = ray_marching(tsdfVolume, sensor,
         // estimatedPoses.back());
 
-        for (int it = 0; it < LEVEL; it++) {
+        for (int it = LEVEL-1; it >= 0; it--) {
+            optimizer->setNbOfIterations(iterations[it]);
             optimizer->estimatePose(source[it], target[it],
                                     currentCameraToWorld);
         }
@@ -173,9 +133,7 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
 
         Matrix4f cameraToWorld = currentCameraPose.inverse();
         tsdfVolume.integrate(source[0], 0.1f);
-
         // Replace target (reference frame) with source (current) frame
-        target = source;
 
         // if (i % 10 == 0) {
         //     if (logMesh(sensor, currentCameraPose, filenameBaseOut) !=
@@ -198,21 +156,21 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
 }
 
 int main(int argc, char *argv[]) {
-   // try {
-        // cxxopts::Options options(argv[0], " - command line options");
-        // options.allow_unrecognised_options().add_options()(
-        //     "d,dataset", "Path to the dataset", cxxopts::value<std::string>())(
-        //     "o,output", "Base output filename", cxxopts::value<std::string>())(
-        //     "r,resolution", "TSDF resolution", cxxopts::value<int>())(
-        //     "v,voxel", "TSDF voxel size", cxxopts::value<float>())(
-        //     "h,help", "Print help");
+   try {
+        cxxopts::Options options(argv[0], " - command line options");
+        options.allow_unrecognised_options().add_options()(
+            "d,dataset", "Path to the dataset", cxxopts::value<std::string>())(
+            "o,output", "Base output filename", cxxopts::value<std::string>())(
+            "r,resolution", "TSDF resolution", cxxopts::value<int>())(
+            "v,voxel", "TSDF voxel size", cxxopts::value<float>())(
+            "h,help", "Print help");
 
-        // auto result = options.parse(argc, argv);
+        auto result = options.parse(argc, argv);
 
-        // if (result.count("help")) {
-        //     std::cout << options.help() << std::endl;
-        //     return 0;
-        // }
+        if (result.count("help")) {
+            std::cout << options.help() << std::endl;
+            return 0;
+        }
 
         std::string datasetPath = "../data/rgbd_dataset_freiburg1_xyz/";
    
@@ -227,8 +185,8 @@ int main(int argc, char *argv[]) {
         std::cout << "Dataset Path: " << datasetPath << std::endl;
         std::cout << "Base Output Filename: " << filenameBaseOut << std::endl;
        return run(datasetPath, filenameBaseOut, resolution, voxelSize);
-    // } catch (cxxopts::exceptions::option_has_no_value &ex) {
-    //     std::cerr << ex.what() << "\n";
-    //     return 1;
-    // }
+    } catch (cxxopts::exceptions::option_has_no_value &ex) {
+        std::cerr << ex.what() << "\n";
+        return 1;
+    }
 }

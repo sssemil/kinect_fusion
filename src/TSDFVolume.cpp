@@ -9,23 +9,6 @@
 TSDFVolume::TSDFVolume(int width, int height, int depth, float voxelSize)
     : width(width), height(height), depth(depth), voxelSize(voxelSize) {
     voxels.resize(width * height * depth);
-    std::fill(voxels.begin(), voxels.end(), Voxel());
-}
-
-TSDFVolume TSDFVolume::buildSphere() {
-    float radius = 4.f;
-    TSDFVolume tsdf(10, 10, 10, 1);
-    for (int x = 0; x < tsdf.width; x++) {
-        for (int y = 0; y < tsdf.height; y++) {
-            for (int z = 0; z < tsdf.depth; z++) {
-                tsdf.getVoxel(x, y, z).distance =
-                    pow(x - tsdf.width / 2.f, 2) +
-                    pow(y - tsdf.height / 2.f, 2) +
-                    pow(z - tsdf.depth / 2.f, 2) - pow(radius, 2);
-            }
-        }
-    }
-    return tsdf;
 }
 
 TSDFVolume::Voxel& TSDFVolume::getVoxel(int x, int y, int z) {

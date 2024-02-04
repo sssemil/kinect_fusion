@@ -2,7 +2,6 @@
 
 #include <Eigen/Dense>
 #include <vector>
-
 #include "PointCloud.h"
 
 struct Coord {
@@ -26,10 +25,8 @@ class TSDFVolume {
     const Voxel& getVoxel(int x, int y, int z) const;
 
     void integrate(const PointCloud& pointCloud, float truncationDistance);
-
+    
     void storeAsOff(const std::string& filenameBaseOut);
-
-    static TSDFVolume buildSphere();
 
    private:
     std::vector<Voxel> voxels;
@@ -41,9 +38,10 @@ class TSDFVolume {
     }
 
     inline Coord fromLinearIndex(int index) const {
+        // TODO: verify
         int x = index % width;
-        int y = (index / width) % height;
-        int z = index / (width * height);
-        return Coord{.x = x, .y = y, .z = z};
+        int y = ((index - x) / width) % height;
+        int z = index - y;
+        return Coord{.x = z, .y = y, .z = z};
     }
 };
