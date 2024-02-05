@@ -4,10 +4,10 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
-
+#include <cuda_runtime.h>
 #include "Eigen.h"
 #include "FreeImageHelper.h"
-
+#include "BilateralFilter.cuh"
 typedef unsigned char BYTE;
 
 // reads sensor files according to
@@ -113,6 +113,11 @@ class VirtualSensor {
             }
         }
         m_currentTrajectory = m_trajectory[idx];
+
+        std::vector<float>depthmapp =  std::vector<float>(m_depthFrame, m_depthFrame + m_depthImageWidth * m_depthImageHeight);
+        std::vector<float> output(m_depthImageWidth * m_depthImageHeight);
+        applyBilateral(depthmapp, m_depthImageWidth, m_depthImageHeight, output);
+
 
         return true;
     }
