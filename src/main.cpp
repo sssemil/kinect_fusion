@@ -132,8 +132,8 @@ int main(int argc, char *argv[]) {
             "r,resolution", "TSDF resolution", cxxopts::value<int>())(
             "x,dx", "X-offset", cxxopts::value<float>())(
             "y,dy", "Y-offset", cxxopts::value<float>())(
-            "z,dz", "Z-offset", cxxopts::value<float>())(
-            "h,help", "Print help");
+            "z,dz", "Z-offset", cxxopts::value<float>())("h,help",
+                                                         "Print help");
 
         auto result = options.parse(argc, argv);
 
@@ -180,7 +180,8 @@ int main(int argc, char *argv[]) {
         std::cout << "Dataset Path: " << datasetPath << std::endl;
         std::cout << "Base Output Filename: " << filenameBaseOut << std::endl;
 
-        return run(datasetPath, filenameBaseOut, size, resolution, Vector3f(dx, dy, dz));
+        return run(datasetPath, filenameBaseOut, size, resolution,
+                   Vector3f(dx, dy, dz));
     } catch (cxxopts::exceptions::option_has_no_value &ex) {
         std::cerr << ex.what() << "\n";
         return 1;
