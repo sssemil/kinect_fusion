@@ -379,7 +379,7 @@ class CeresICPOptimizer : public ICPOptimizer {
         options.use_nonmonotonic_steps = false;
         options.linear_solver_type = ceres::DENSE_QR;
         options.minimizer_progress_to_stdout = true;
-        options.max_num_iterations = 10;
+        options.max_num_iterations = 1;
         options.num_threads = 8;
         options.dense_linear_algebra_library_type = ceres::CUDA;
     }
