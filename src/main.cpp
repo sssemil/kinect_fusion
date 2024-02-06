@@ -31,7 +31,8 @@ int logMesh(VirtualSensor&sensor, const Matrix4f&currentCameraPose,
 }
 
 int run(const std::string&datasetPath, const std::string&filenameBaseOut,
-        float size, int resolution, Vector3f offset, bool relativeToPreviousFrame) {
+        float size, int resolution, Vector3f offset, bool relativeToPreviousFrame,
+        unsigned int stopAfterFrame) {
     // load video
     std::cout << "Initialize virtual sensor..." << std::endl;
     VirtualSensor sensor;
@@ -70,8 +71,7 @@ int run(const std::string&datasetPath, const std::string&filenameBaseOut,
     tsdfVolume.integrate(target, currentCameraToWorld, 0.1f);
 
     int i = 0;
-    const int iMax = 1000;
-    while (sensor.processNextFrame() && i < iMax) {
+    while (sensor.processNextFrame() && i < stopAfterFrame) {
         Matrix3f depthIntrinsics = sensor.getDepthIntrinsics();
         Matrix4f depthExtrinsics = sensor.getDepthExtrinsics();
 
@@ -140,6 +140,7 @@ int main(int argc, char* argv[]) {
             "d,dataset", "Path to the dataset", cxxopts::value<std::string>())(
             "o,output", "Base output filename", cxxopts::value<std::string>())(
             "r,resolution", "TSDF resolution", cxxopts::value<int>())(
+            "s,stopAfterFrame", "Stop after this number of frames", cxxopts::value<unsigned int>())(
             "x,dx", "X-offset", cxxopts::value<float>())(
             "y,dy", "Y-offset", cxxopts::value<float>())(
             "z,dz", "Z-offset", cxxopts::value<float>())(
@@ -173,6 +174,11 @@ int main(int argc, char* argv[]) {
             resolution = result["resolution"].as<int>();
         }
 
+        unsigned int stopAfterFrame = 51;
+        if (result.count("stopAfterFrame")) {
+            stopAfterFrame = result["stopAfterFrame"].as<unsigned int>();
+        }
+
         float dx = 2.f; // meters
         if (result.count("dx")) {
             dx = result["dx"].as<float>();
@@ -202,7 +208,7 @@ int main(int argc, char* argv[]) {
                 << std::endl;
 
         return run(datasetPath, filenameBaseOut, size, resolution,
-                   Vector3f(dx, dy, dz), relativeToPreviousFrame);
+                   Vector3f(dx, dy, dz), relativeToPreviousFrame, stopAfterFrame);
     }
     catch (cxxopts::exceptions::option_has_no_value&ex) {
         std::cerr << ex.what() << "\n";
