@@ -195,6 +195,11 @@ int main(int argc, char* argv[]) {
 
         std::cout << "Dataset Path: " << datasetPath << std::endl;
         std::cout << "Base Output Filename: " << filenameBaseOut << std::endl;
+        std::cout << "Size: " << size << std::endl;
+        std::cout << "Resolution: " << resolution << std::endl;
+        std::cout << "Offsets: " << dx << ", " << dy << ", " << dz << std::endl;
+        std::cout << "Relative to Previous Frame: " << relativeToPreviousFrame
+                << std::endl;
 
         return run(datasetPath, filenameBaseOut, size, resolution,
                    Vector3f(dx, dy, dz), relativeToPreviousFrame);
