@@ -9,19 +9,19 @@
 #include "VirtualSensor.h"
 #include "cxxopts.hpp"
 
-int logMesh(VirtualSensor &sensor, const Matrix4f &currentCameraPose,
-            const std::string &filenameBaseOut) {
+int logMesh(VirtualSensor&sensor, const Matrix4f&currentCameraPose,
+            const std::string&filenameBaseOut) {
     // We write out the mesh to file for debugging.
     SimpleMesh currentDepthMesh{sensor, currentCameraPose, 0.1f};
     SimpleMesh currentCameraMesh =
-        SimpleMesh::camera(currentCameraPose, 0.0015f);
+            SimpleMesh::camera(currentCameraPose, 0.0015f);
     SimpleMesh resultingMesh = SimpleMesh::joinMeshes(
         currentDepthMesh, currentCameraMesh, Matrix4f::Identity());
 
     std::stringstream ss;
     ss << filenameBaseOut << sensor.getCurrentFrameCnt() << ".off";
     std::cout << filenameBaseOut << sensor.getCurrentFrameCnt() << ".off"
-              << std::endl;
+            << std::endl;
     if (!resultingMesh.writeMesh(ss.str())) {
         std::cout << "Failed to write mesh!\nCheck file path!" << std::endl;
         return -1;
@@ -30,23 +30,25 @@ int logMesh(VirtualSensor &sensor, const Matrix4f &currentCameraPose,
     return 0;
 }
 
-int run(const std::string &datasetPath, const std::string &filenameBaseOut,
-        float size, int resolution, Vector3f offset) {
+int run(const std::string&datasetPath, const std::string&filenameBaseOut,
+        float size, int resolution, Vector3f offset, bool relativeToPreviousFrame) {
     // load video
     std::cout << "Initialize virtual sensor..." << std::endl;
     VirtualSensor sensor;
     if (!sensor.init(datasetPath)) {
         std::cout << "Failed to initialize the sensor!\nCheck file path!"
-                  << std::endl;
+                << std::endl;
         return -1;
     }
 
     // We store a first frame as a reference frame. All next frames are tracked
     // relatively to the first frame.
     sensor.processNextFrame();
-    PointCloud target{sensor.getDepth(), sensor.getDepthIntrinsics(),
-                      sensor.getDepthExtrinsics(), sensor.getDepthImageWidth(),
-                      sensor.getDepthImageHeight()};
+    PointCloud target{
+        sensor.getDepth(), sensor.getDepthIntrinsics(),
+        sensor.getDepthExtrinsics(), sensor.getDepthImageWidth(),
+        sensor.getDepthImageHeight()
+    };
 
     // Setup the optimizer.
     auto optimizer = new CeresICPOptimizer();
@@ -68,7 +70,7 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
     tsdfVolume.integrate(target, currentCameraToWorld, 0.1f);
 
     int i = 0;
-    const int iMax = 10;
+    const int iMax = 1000;
     while (sensor.processNextFrame() && i < iMax) {
         Matrix3f depthIntrinsics = sensor.getDepthIntrinsics();
         Matrix4f depthExtrinsics = sensor.getDepthExtrinsics();
@@ -76,12 +78,14 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
         // Estimate the current camera pose from source to target mesh with ICP
         // optimization. We downsample the source image to speed up the
         // correspondence matching.
-        PointCloud source{sensor.getDepth(),
-                          sensor.getDepthIntrinsics(),
-                          sensor.getDepthExtrinsics(),
-                          sensor.getDepthImageWidth(),
-                          sensor.getDepthImageHeight(),
-                          8};
+        PointCloud source{
+            sensor.getDepth(),
+            sensor.getDepthIntrinsics(),
+            sensor.getDepthExtrinsics(),
+            sensor.getDepthImageWidth(),
+            sensor.getDepthImageHeight(),
+            8
+        };
 
         // TODO: Track camera pose and then get the target image from the TSDF
         // from that pose.
@@ -94,14 +98,16 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
         // Invert the transformation matrix to get the current camera pose.
         Matrix4f currentCameraPose = currentCameraToWorld.inverse();
         std::cout << "Current camera pose: " << std::endl
-                  << currentCameraPose << std::endl;
+                << currentCameraPose << std::endl;
         estimatedPoses.push_back(currentCameraPose);
 
         Matrix4f cameraToWorld = currentCameraPose.inverse();
         tsdfVolume.integrate(source, currentCameraToWorld, 0.1f);
 
         // Replace target (reference frame) with source (current) frame
-        // target = source;
+        if (relativeToPreviousFrame) {
+            target = source;
+        }
 
         // if (i % 10 == 0) {
         //     if (logMesh(sensor, currentCameraPose, filenameBaseOut) !=
@@ -111,19 +117,23 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
         // }
 
         i++;
+
+        if (i % 50 == 0) {
+            tsdfVolume.storeAsOff(filenameBaseOut, i);
+        }
     }
 
     // Building an SDF of a sphere manually
     // TSDFVolume tsdfVolume = TSDFVolume::buildSphere();
 
-    tsdfVolume.storeAsOff(filenameBaseOut);
+    tsdfVolume.storeAsOff(filenameBaseOut, i);
 
     delete optimizer;
 
     return 0;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     try {
         cxxopts::Options options(argv[0], " - command line options");
         options.allow_unrecognised_options().add_options()(
@@ -132,8 +142,9 @@ int main(int argc, char *argv[]) {
             "r,resolution", "TSDF resolution", cxxopts::value<int>())(
             "x,dx", "X-offset", cxxopts::value<float>())(
             "y,dy", "Y-offset", cxxopts::value<float>())(
-            "z,dz", "Z-offset", cxxopts::value<float>())("h,help",
-                                                         "Print help");
+            "z,dz", "Z-offset", cxxopts::value<float>())(
+            "f,relativeToPreviousFrame", "Use relative frame as first frame", cxxopts::value<bool>())(
+            "h,help", "Print help");
 
         auto result = options.parse(argc, argv);
 
@@ -152,7 +163,7 @@ int main(int argc, char *argv[]) {
             filenameBaseOut = result["output"].as<std::string>();
         }
 
-        float size = 4.0f;  // meters
+        float size = 4.0f; // meters
         if (result.count("size")) {
             size = result["size"].as<float>();
         }
@@ -162,27 +173,33 @@ int main(int argc, char *argv[]) {
             resolution = result["resolution"].as<int>();
         }
 
-        float dx = 2.f;  // meters
+        float dx = 2.f; // meters
         if (result.count("dx")) {
             dx = result["dx"].as<float>();
         }
 
-        float dy = 2.f;  // meters
+        float dy = 2.f; // meters
         if (result.count("dy")) {
             dy = result["dy"].as<float>();
         }
 
-        float dz = -0.5f;  // meters
+        float dz = -0.5f; // meters
         if (result.count("dz")) {
             dz = result["dz"].as<float>();
+        }
+
+        bool relativeToPreviousFrame = true;
+        if (result.count("relativeToPreviousFrame")) {
+            relativeToPreviousFrame = result["relativeToPreviousFrame"].as<bool>();
         }
 
         std::cout << "Dataset Path: " << datasetPath << std::endl;
         std::cout << "Base Output Filename: " << filenameBaseOut << std::endl;
 
         return run(datasetPath, filenameBaseOut, size, resolution,
-                   Vector3f(dx, dy, dz));
-    } catch (cxxopts::exceptions::option_has_no_value &ex) {
+                   Vector3f(dx, dy, dz), relativeToPreviousFrame);
+    }
+    catch (cxxopts::exceptions::option_has_no_value&ex) {
         std::cerr << ex.what() << "\n";
         return 1;
     }
