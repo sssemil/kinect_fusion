@@ -105,9 +105,10 @@ void TSDFVolume::integrate(const PointCloud& pointCloud,
     }
 }
 
-void TSDFVolume::storeAsOff(const std::string& filenameBaseOut, unsigned int frameNumber) {
+void TSDFVolume::storeAsOff(const std::string& filenameBaseOut,
+                            unsigned int frameNumber) {
     std::stringstream ss;
-    ss << filenameBaseOut << "tsdf_volume_"<<frameNumber<<".off";
+    ss << filenameBaseOut << "tsdf_volume_" << frameNumber << ".off";
     std::cout << "Storing TSDFVolume as OFF at: " << ss.str() << "..."
               << std::endl;
 

@@ -71,7 +71,7 @@ class VirtualSensor {
         return true;
     }
 
-    bool processNextFrame() {
+    bool processNextFrame(bool applyBilateralEnabled) {
         if (m_currentIdx == -1)
             m_currentIdx = 0;
         else
@@ -116,12 +116,14 @@ class VirtualSensor {
         }
         m_currentTrajectory = m_trajectory[idx];
 
-        std::vector<float> depthmapp = std::vector<float>(
-            m_depthFrame,
-            m_depthFrame + m_depthImageWidth * m_depthImageHeight);
-        std::vector<float> output(m_depthImageWidth * m_depthImageHeight);
-        applyBilateral(depthmapp, m_depthImageWidth, m_depthImageHeight,
-                       output);
+        if (applyBilateralEnabled) {
+            std::vector<float> depthmapp = std::vector<float>(
+                m_depthFrame,
+                m_depthFrame + m_depthImageWidth * m_depthImageHeight);
+            std::vector<float> output(m_depthImageWidth * m_depthImageHeight);
+            applyBilateral(depthmapp, m_depthImageWidth, m_depthImageHeight,
+                           output);
+        }
 
         return true;
     }

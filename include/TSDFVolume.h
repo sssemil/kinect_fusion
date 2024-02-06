@@ -33,7 +33,8 @@ class TSDFVolume {
     void integrate(const PointCloud& pointCloud, const Eigen::Matrix4f& pose,
                    float truncationDistance);
 
-    void storeAsOff(const std::string& filenameBaseOut, unsigned int frameNumber);
+    void storeAsOff(const std::string& filenameBaseOut,
+                    unsigned int frameNumber);
 
     static TSDFVolume buildSphere();
 
