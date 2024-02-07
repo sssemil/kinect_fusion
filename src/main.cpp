@@ -200,7 +200,7 @@ int main(int argc, char* argv[]) {
             dz = result["dz"].as<float>();
         }
 
-        bool relativeToPreviousFrame = true;
+        bool relativeToPreviousFrame = false;
         if (result.count("relativeToPreviousFrame")) {
             relativeToPreviousFrame =
                 result["relativeToPreviousFrame"].as<bool>();
