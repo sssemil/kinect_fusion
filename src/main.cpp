@@ -116,7 +116,7 @@ int run(const std::string& datasetPath, const std::string& filenameBaseOut,
 
         i++;
 
-        if (i % 50 == 0) {
+        if (i % 20 == 0) {
             tsdfVolume.storeAsOff(filenameBaseOut, i);
         }
     }
@@ -175,7 +175,7 @@ int main(int argc, char* argv[]) {
             resolution = result["resolution"].as<int>();
         }
 
-        unsigned int stopAfterFrame = 51;
+        unsigned int stopAfterFrame = 21;
         if (result.count("stopAfterFrame")) {
             stopAfterFrame = result["stopAfterFrame"].as<unsigned int>();
         }
