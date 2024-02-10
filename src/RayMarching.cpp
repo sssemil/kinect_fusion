@@ -82,7 +82,8 @@ PointCloud ray_marching(const TSDFVolume& tsdf, VirtualSensor& sensor,
 
     FreeImage img(width, height, 1);
     img.data = distances_copy.data();
-    img.SaveImageToFile("output.png");
+    // save to file output_{timestamp}.png
+    img.SaveImageToFile("output_" + std::to_string(sensor.getCurrentFrameCnt()) + ".png");
     img.data = nullptr;
 
     return PointCloud{distances.data(),
