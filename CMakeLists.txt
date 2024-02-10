@@ -10,6 +10,12 @@ if(CUDA_FOUND)
     include_directories(${CUDA_INCLUDE_DIRS})
 endif()
 
+# Add OpenMP support
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    link_libraries(OpenMP::OpenMP_CXX)
+endif()
+
 # Options
 set(LIBRARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../Libs CACHE PATH "Path to lib folder")
 set(Eigen3_DIR ${LIBRARY_DIR}/Eigen/share/eigen3/cmake CACHE PATH "Path to installed Eigen")

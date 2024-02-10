@@ -165,6 +165,8 @@ void TSDFVolume::storeAsOff(const std::string& filenameBaseOut,
 
     Vector3d half(width / 2.f, height / 2.f, depth / 2.f);
     Volume vol(-half * voxelSize, half * voxelSize, width, height, depth, 1);
+
+#pragma omp parallel for collapse(3)
     for (unsigned int x = 0; x < vol.getDimX(); x++) {
         for (unsigned int y = 0; y < vol.getDimY(); y++) {
             for (unsigned int z = 0; z < vol.getDimZ(); z++) {
@@ -176,36 +178,45 @@ void TSDFVolume::storeAsOff(const std::string& filenameBaseOut,
 
     // extract the zero iso-surface using marching cubes
 
-    SimpleMesh mesh;
+    std::vector<SimpleMesh> meshes(omp_get_max_threads()); // Vector of meshes, one per thread
 
     // Count duration of marching cubes
     auto start = std::chrono::high_resolution_clock::now();
 
+#pragma omp parallel for collapse(2) schedule(dynamic)
     for (unsigned int x = 0; x < vol.getDimX() - 1; x++) {
-        auto intermittent_end = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> elapsed = intermittent_end - start;
-        auto it_per_sec = x / elapsed.count();
-        printf(
-            "\rMarching Cubes on slice %d of %d (%0.2f seconds) [%0.2f it/s]",
-            x, vol.getDimX(), elapsed.count(), it_per_sec);
-        fflush(stdout);
+//        auto intermittent_end = std::chrono::high_resolution_clock::now();
+//        std::chrono::duration<double> elapsed = intermittent_end - start;
+//        auto it_per_sec = x / elapsed.count();
+//        printf(
+//            "\rMarching Cubes on slice %d of %d (%0.2f seconds) [%0.2f it/s]",
+//            x, vol.getDimX(), elapsed.count(), it_per_sec);
+//        fflush(stdout);
 
-#pragma omp parallel for
         for (unsigned int y = 0; y < vol.getDimY() - 1; y++) {
             for (unsigned int z = 0; z < vol.getDimZ() - 1; z++) {
-                ProcessVolumeCell(&vol, x, y, z, 0.00f, &mesh);
+                int thread_id = omp_get_thread_num(); // Get the current thread's ID
+                ProcessVolumeCell(&vol, x, y, z, 0.00f, &meshes[thread_id]); // Use thread-local mesh
             }
         }
     }
     printf("\n");
 
+    // Combine all the meshes into one
+    SimpleMesh finalMesh;
+    for (const auto& mesh : meshes) {
+        finalMesh = SimpleMesh::joinMeshes(finalMesh, mesh, Matrix4f::Identity());
+    }
+
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
-    std::cout << "Marching Cubes took " << elapsed.count() << " seconds."
-              << std::endl;
+    std::cout << "Marching Cubes took " << elapsed.count() << " seconds." << std::endl;
+    std::cout << "Processed " << vol.getDimX() << " x-slices in total." << std::endl;
+    auto it_per_sec = vol.getDimX() / elapsed.count();
+    std::cout << "That's " << it_per_sec << " it/s" << std::endl;
 
     // write mesh to file
-    if (!mesh.writeMesh(ss.str())) {
+    if (!finalMesh.writeMesh(ss.str())) {
         std::cout << "ERROR: unable to write output file!" << std::endl;
     }
 }
