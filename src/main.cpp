@@ -68,6 +68,7 @@ int run(const std::string& datasetPath, const std::string& filenameBaseOut,
 
     // Build TSDF using the first frame
     tsdfVolume.integrate(target, currentCameraToWorld, 0.1f);
+    tsdfVolume.countNonThreshold();
 
     int i = 0;
     while (sensor.processNextFrame(applyBilateralEnabled) &&
