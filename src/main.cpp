@@ -61,7 +61,6 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
     Matrix4f currentCameraToWorld = Matrix4f::Identity();
     estimatedPoses.emplace_back(currentCameraToWorld.inverse());
 
-
     // Define the dimensions and resolution of the TSDF volume
     TSDFVolume tsdfVolume(size, resolution, offset);
     // TSDFVolume tsdfVolume(resolution, resolution, resolution, voxelSize);
@@ -69,9 +68,8 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
     // Build TSDF using the first frame
     tsdfVolume.integrate(target, currentCameraToWorld, 0.1f);
 
-
     // Building an SDF of a sphere manually
-//    TSDFVolume tsdfVolume = TSDFVolume::buildSphere();
+    //    TSDFVolume tsdfVolume = TSDFVolume::buildSphere();
     target = ray_marching(tsdfVolume, sensor, estimatedPoses.back());
 
     /*int i = 0;
@@ -135,8 +133,8 @@ int main(int argc, char *argv[]) {
             "r,resolution", "TSDF resolution", cxxopts::value<int>())(
             "x,dx", "X-offset", cxxopts::value<float>())(
             "y,dy", "Y-offset", cxxopts::value<float>())(
-            "z,dz", "Z-offset", cxxopts::value<float>())(
-            "h,help", "Print help");
+            "z,dz", "Z-offset", cxxopts::value<float>())("h,help",
+                                                         "Print help");
 
         auto result = options.parse(argc, argv);
 
@@ -183,7 +181,8 @@ int main(int argc, char *argv[]) {
         std::cout << "Dataset Path: " << datasetPath << std::endl;
         std::cout << "Base Output Filename: " << filenameBaseOut << std::endl;
 
-        return run(datasetPath, filenameBaseOut, size, resolution, Vector3f(dx, dy, dz));
+        return run(datasetPath, filenameBaseOut, size, resolution,
+                   Vector3f(dx, dy, dz));
     } catch (cxxopts::exceptions::option_has_no_value &ex) {
         std::cerr << ex.what() << "\n";
         return 1;

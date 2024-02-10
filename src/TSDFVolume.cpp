@@ -8,14 +8,20 @@
 
 #define TRUNCATION 2.f
 
-TSDFVolume::TSDFVolume(int width, int height, int depth, float voxelSize, Vector3f offset)
-    : width(width), height(height), depth(depth), voxelSize(voxelSize), offset(offset) {
+TSDFVolume::TSDFVolume(int width, int height, int depth, float voxelSize,
+                       Vector3f offset)
+    : width(width),
+      height(height),
+      depth(depth),
+      voxelSize(voxelSize),
+      offset(offset) {
     voxels.resize(width * height * depth);
     std::fill(voxels.begin(), voxels.end(), Voxel());
 }
 
 TSDFVolume::TSDFVolume(float size, int resolution, Vector3f offset)
-    : TSDFVolume(resolution, resolution, resolution, size / resolution, offset) {}
+    : TSDFVolume(resolution, resolution, resolution, size / resolution,
+                 offset) {}
 
 TSDFVolume TSDFVolume::buildSphere() {
     float radius = 4.f;
@@ -24,11 +30,9 @@ TSDFVolume TSDFVolume::buildSphere() {
     for (int x = 0; x < tsdf.width; x++) {
         for (int y = 0; y < tsdf.height; y++) {
             for (int z = 0; z < tsdf.depth; z++) {
-                auto s = sqrt(
-                             pow(x - tsdf.width / 2.f, 2) +
-                             pow(y - tsdf.height / 2.f, 2) +
-                             pow(z - tsdf.depth / 2.f, 2)
-                                 );
+                auto s = sqrt(pow(x - tsdf.width / 2.f, 2) +
+                              pow(y - tsdf.height / 2.f, 2) +
+                              pow(z - tsdf.depth / 2.f, 2));
                 auto d = s - radius;
                 auto val = fmin(TRUNCATION, fmax(-TRUNCATION, d));
                 tsdf.getVoxel(x, y, z).distance = val;
@@ -82,14 +86,16 @@ float TSDFVolume::getVoxelDistanceValue(int x, int y, int z) const {
     return voxels[toLinearIndex(x, y, z)].distance;
 }
 
-//TSDFVolume::Voxel& TSDFVolume::getVoxelCoordinatesForWorldCoordinates(const Vector3f& pos) {
-//    Vector3f halfSize = 0.5f * Vector3f(width, height, depth);
-//    Eigen::Vector3i voxelCoord =
-//        ((pos + offset + halfSize) / voxelSize).cast<int>();
-//    return getVoxel(voxelCoord[0], voxelCoord[1], voxelCoord[2]);
-//}
+// TSDFVolume::Voxel& TSDFVolume::getVoxelCoordinatesForWorldCoordinates(const
+// Vector3f& pos) {
+//     Vector3f halfSize = 0.5f * Vector3f(width, height, depth);
+//     Eigen::Vector3i voxelCoord =
+//         ((pos + offset + halfSize) / voxelSize).cast<int>();
+//     return getVoxel(voxelCoord[0], voxelCoord[1], voxelCoord[2]);
+// }
 
-Vector3i TSDFVolume::getVoxelCoordinatesForWorldCoordinates(const Vector3f& pos) const {
+Vector3i TSDFVolume::getVoxelCoordinatesForWorldCoordinates(
+    const Vector3f& pos) const {
     Vector3f half(width / 2.f, height / 2.f, depth / 2.f);
     return ((pos /*+ half*/ + offset) / voxelSize).cast<int>();
 }
@@ -109,7 +115,8 @@ void TSDFVolume::integrate(const PointCloud& pointCloud,
         Eigen::Vector3f normal = transform.rotation() * normals[i];
 
         // Transform point to TSDF grid coordinates
-        // TODO: find the exact relationship between voxelSize and the SDF dimensions
+        // TODO: find the exact relationship between voxelSize and the SDF
+        // dimensions
         Vector3i voxelCoord = getVoxelCoordinatesForWorldCoordinates(point);
 
         // Update voxel if within TSDF volume bounds
@@ -141,14 +148,12 @@ void TSDFVolume::storeAsOff(const std::string& filenameBaseOut) {
               << std::endl;
 
     // convert our TSDF to Volume
-//    Volume vol(Vector3d(-0.5, -0.5, -0.5),
-//               Vector3d(0.5, 0.5, 0.5),
-//               width, height, depth, 1);
+    //    Volume vol(Vector3d(-0.5, -0.5, -0.5),
+    //               Vector3d(0.5, 0.5, 0.5),
+    //               width, height, depth, 1);
 
     Vector3d half(width / 2.f, height / 2.f, depth / 2.f);
-    Volume vol(-half * voxelSize,
-               half * voxelSize,
-               width, height, depth, 1);
+    Volume vol(-half * voxelSize, half * voxelSize, width, height, depth, 1);
     for (unsigned int x = 0; x < vol.getDimX(); x++) {
         for (unsigned int y = 0; y < vol.getDimY(); y++) {
             for (unsigned int z = 0; z < vol.getDimZ(); z++) {
