@@ -6,6 +6,8 @@
 #include "MarchingCubes.h"
 #include "Volume.h"
 
+#define TRUNCATION 2.f
+
 TSDFVolume::TSDFVolume(int width, int height, int depth, float voxelSize,
                        Vector3f offset)
     : width(width),
@@ -23,17 +25,43 @@ TSDFVolume::TSDFVolume(float size, int resolution, Vector3f offset)
 
 TSDFVolume TSDFVolume::buildSphere() {
     float radius = 4.f;
-    TSDFVolume tsdf(10, 10, 10, 1);
+    TSDFVolume tsdf(10, 10, Vector3f(0, 0, 0));
+
     for (int x = 0; x < tsdf.width; x++) {
         for (int y = 0; y < tsdf.height; y++) {
             for (int z = 0; z < tsdf.depth; z++) {
-                tsdf.getVoxel(x, y, z).distance =
-                    pow(x - tsdf.width / 2.f, 2) +
-                    pow(y - tsdf.height / 2.f, 2) +
-                    pow(z - tsdf.depth / 2.f, 2) - pow(radius, 2);
+                auto s = sqrt(pow(x - tsdf.width / 2.f, 2) +
+                              pow(y - tsdf.height / 2.f, 2) +
+                              pow(z - tsdf.depth / 2.f, 2));
+                auto d = s - radius;
+                auto val = fmin(TRUNCATION, fmax(-TRUNCATION, d));
+                tsdf.getVoxel(x, y, z).distance = val;
             }
         }
     }
+
+    bool print_sdf = false;
+    if (print_sdf) {
+        std::cout << "[" << std::endl;
+        for (int x = 0; x < tsdf.width; x++) {
+            std::cout << "\t[" << std::endl;
+            for (int y = 0; y < tsdf.height; y++) {
+                std::cout << "\t\t[";
+                for (int z = 0; z < tsdf.depth; z++) {
+                    std::cout << tsdf.getVoxel(x, y, z).distance;
+                    if (z < tsdf.depth - 1) std::cout << ", ";
+                }
+                std::cout << "]";
+                if (y < tsdf.height - 1) std::cout << ",";
+                std::cout << std::endl;
+            }
+            std::cout << "\t]";
+            if (x < tsdf.width - 1) std::cout << ",";
+            std::cout << std::endl;
+        }
+        std::cout << "]" << std::endl;
+    }
+
     return tsdf;
 }
 
@@ -51,17 +79,17 @@ const TSDFVolume::Voxel& TSDFVolume::getVoxel(int x, int y, int z) const {
     return voxels[toLinearIndex(x, y, z)];
 }
 
-// TSDFVolume::Voxel& TSDFVolume::getVoxelCoordinatesForWorldCoordinates(const
-// Vector3f& pos) {
-//     Vector3f halfSize = 0.5f * Vector3f(width, height, depth);
-//     Eigen::Vector3i voxelCoord =
-//         ((pos + offset + halfSize) / voxelSize).cast<int>();
-//     return getVoxel(voxelCoord[0], voxelCoord[1], voxelCoord[2]);
-// }
+float TSDFVolume::getVoxelDistanceValue(int x, int y, int z) const {
+    if (x < 0 || x >= width || y < 0 || y >= height || z < 0 || z >= depth) {
+        return TRUNCATION;
+    }
+    return voxels[toLinearIndex(x, y, z)].distance;
+}
 
 Vector3i TSDFVolume::getVoxelCoordinatesForWorldCoordinates(
     const Vector3f& pos) const {
-    return ((pos + offset) / voxelSize).cast<int>();
+    Vector3f half(width / 2.f, height / 2.f, depth / 2.f);
+    return ((pos /*+ half*/ + offset) / voxelSize).cast<int>();
 }
 
 void TSDFVolume::integrate(const PointCloud& pointCloud,
@@ -113,8 +141,15 @@ void TSDFVolume::storeAsOff(const std::string& filenameBaseOut,
               << std::endl;
 
     // convert our TSDF to Volume
-    Volume vol(Vector3d(-0.1, -0.1, -0.1), Vector3d(1.1, 1.1, 1.1), width,
-               height, depth, 1);
+    // Volume vol(Vector3d(-0.1, -0.1, -0.1),
+    //            Vector3d(1.1, 1.1, 1.1),
+    //            width, height, depth, 1);
+    // Volume vol(Vector3d(-0.5, -0.5, -0.5),
+    //            Vector3d(0.5, 0.5, 0.5),
+    //            width, height, depth, 1);
+
+    Vector3d half(width / 2.f, height / 2.f, depth / 2.f);
+    Volume vol(-half * voxelSize, half * voxelSize, width, height, depth, 1);
     for (unsigned int x = 0; x < vol.getDimX(); x++) {
         for (unsigned int y = 0; y < vol.getDimY(); y++) {
             for (unsigned int z = 0; z < vol.getDimZ(); z++) {
