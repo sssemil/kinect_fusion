@@ -6,8 +6,14 @@
 #include "MarchingCubes.h"
 #include "Volume.h"
 
-TSDFVolume::TSDFVolume(int width, int height, int depth, float voxelSize, Vector3f offset)
-    : width(width), height(height), depth(depth), size(voxelSize * width), voxelSize(voxelSize), offset(offset) {
+TSDFVolume::TSDFVolume(int width, int height, int depth, float voxelSize,
+                       Vector3f offset)
+    : width(width),
+      height(height),
+      depth(depth),
+      size(voxelSize * width),
+      voxelSize(voxelSize),
+      offset(offset) {
     voxels.resize(width * height * depth);
     std::fill(voxels.begin(), voxels.end(), Voxel());
 }
@@ -27,11 +33,9 @@ TSDFVolume TSDFVolume::buildSphere() {
     for (int x = 0; x < tsdf.width; x++) {
         for (int y = 0; y < tsdf.height; y++) {
             for (int z = 0; z < tsdf.depth; z++) {
-                auto s = sqrt(
-                             pow((x - tsdf.width / 2.f) * vsize, 2) +
-                             pow((y - tsdf.height / 2.f) * vsize, 2) +
-                             pow((z - tsdf.depth / 2.f) * vsize, 2)
-                                 );
+                auto s = sqrt(pow((x - tsdf.width / 2.f) * vsize, 2) +
+                              pow((y - tsdf.height / 2.f) * vsize, 2) +
+                              pow((z - tsdf.depth / 2.f) * vsize, 2));
                 auto d = s - radius;
                 auto val = fmin(TRUNCATION, fmax(-TRUNCATION, d));
                 tsdf.getVoxel(x, y, z).distance = val;
@@ -42,7 +46,8 @@ TSDFVolume TSDFVolume::buildSphere() {
     return tsdf;
 }
 
-void TSDFVolume::printSdf(const Vector3i& from, const Vector3i& to, std::ostream& out) {
+void TSDFVolume::printSdf(const Vector3i& from, const Vector3i& to,
+                          std::ostream& out) {
     std::cout << "[" << std::endl;
     for (int x = from.x(); x < to.x(); x++) {
         std::cout << "\t[" << std::endl;
@@ -75,7 +80,8 @@ void TSDFVolume::countNonThreshold() {
         }
     }
     std::cout << count << " voxels with non-truncated value" << std::endl
-              << "That's " << 100.f * count / (width * height * depth) << "% percent" << std::endl;
+              << "That's " << 100.f * count / (width * height * depth)
+              << "% percent" << std::endl;
 }
 
 TSDFVolume::Voxel& TSDFVolume::getVoxel(int x, int y, int z) {
@@ -99,7 +105,8 @@ float TSDFVolume::getVoxelDistanceValue(int x, int y, int z) const {
     return voxels[toLinearIndex(x, y, z)].distance;
 }
 
-Vector3i TSDFVolume::getVoxelCoordinatesForWorldCoordinates(const Vector3f& pos) const {
+Vector3i TSDFVolume::getVoxelCoordinatesForWorldCoordinates(
+    const Vector3f& pos) const {
     Vector3f half(size / 2.f, size / 2.f, size / 2.f);
     return ((pos + half + offset) / voxelSize).cast<int>();
 }
@@ -119,7 +126,8 @@ void TSDFVolume::integrate(const PointCloud& pointCloud,
         Eigen::Vector3f normal = transform.rotation() * normals[i];
 
         // Transform point to TSDF grid coordinates
-        // TODO: find the exact relationship between voxelSize and the SDF dimensions
+        // TODO: find the exact relationship between voxelSize and the SDF
+        // dimensions
         Vector3i voxelCoord = getVoxelCoordinatesForWorldCoordinates(point);
 
         // Update voxel if within TSDF volume bounds
@@ -132,8 +140,7 @@ void TSDFVolume::integrate(const PointCloud& pointCloud,
 
             // Compute signed distance and update voxel
             float sdf = normal.dot(point);
-            sdf = std::min(std::max(sdf, -TRUNCATION),
-                           TRUNCATION);
+            sdf = std::min(std::max(sdf, -TRUNCATION), TRUNCATION);
 
             // Weighted average update
             float wNew = 1.0;  // Example: constant weight
@@ -157,9 +164,7 @@ void TSDFVolume::storeAsOff(const std::string& filenameBaseOut,
     //            width, height, depth, 1);
 
     Vector3d half(width / 2.f, height / 2.f, depth / 2.f);
-    Volume vol(-half * voxelSize,
-               half * voxelSize,
-               width, height, depth, 1);
+    Volume vol(-half * voxelSize, half * voxelSize, width, height, depth, 1);
     for (unsigned int x = 0; x < vol.getDimX(); x++) {
         for (unsigned int y = 0; y < vol.getDimY(); y++) {
             for (unsigned int z = 0; z < vol.getDimZ(); z++) {

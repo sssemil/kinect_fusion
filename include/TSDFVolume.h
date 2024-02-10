@@ -23,7 +23,8 @@ class TSDFVolume {
         float distance;
         float weight;
         Voxel()
-            : distance(TRUNCATION), weight(0.0f) {}  // Initialize with default values
+            : distance(TRUNCATION),
+              weight(0.0f) {}  // Initialize with default values
     };
 
     Voxel& getVoxel(int x, int y, int z);
@@ -41,27 +42,18 @@ class TSDFVolume {
 
     static TSDFVolume buildSphere();
 
-    int getWidth() const {
-        return width;
-    }
+    int getWidth() const { return width; }
 
-    int getHeight() const {
-        return height;
-    }
+    int getHeight() const { return height; }
 
-    int getDepth() const {
-        return depth;
-    }
+    int getDepth() const { return depth; }
 
-    float getPhysicalSize() const {
-        return size;
-    }
+    float getPhysicalSize() const { return size; }
 
-    float getVoxelSize() const {
-        return voxelSize;
-    }
+    float getVoxelSize() const { return voxelSize; }
 
-    void printSdf(const Vector3i& from, const Vector3i& to, std::ostream& out = std::cout);
+    void printSdf(const Vector3i& from, const Vector3i& to,
+                  std::ostream& out = std::cout);
     void countNonThreshold();
 
    private:
