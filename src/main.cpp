@@ -61,6 +61,7 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
     Matrix4f currentCameraToWorld = Matrix4f::Identity();
     estimatedPoses.emplace_back(currentCameraToWorld.inverse());
 
+
     // Define the dimensions and resolution of the TSDF volume
     TSDFVolume tsdfVolume(size, resolution, offset);
     // TSDFVolume tsdfVolume(resolution, resolution, resolution, voxelSize);
@@ -68,7 +69,12 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
     // Build TSDF using the first frame
     tsdfVolume.integrate(target, currentCameraToWorld, 0.1f);
 
-    int i = 0;
+
+    // Building an SDF of a sphere manually
+//    TSDFVolume tsdfVolume = TSDFVolume::buildSphere();
+    target = ray_marching(tsdfVolume, sensor, estimatedPoses.back());
+
+    /*int i = 0;
     const int iMax = 10;
     while (sensor.processNextFrame() && i < iMax) {
         Matrix3f depthIntrinsics = sensor.getDepthIntrinsics();
@@ -111,10 +117,7 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
         // }
 
         i++;
-    }
-
-    // Building an SDF of a sphere manually
-    // TSDFVolume tsdfVolume = TSDFVolume::buildSphere();
+    }*/
 
     tsdfVolume.storeAsOff(filenameBaseOut);
 

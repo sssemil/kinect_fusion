@@ -26,6 +26,7 @@ class TSDFVolume {
 
     Voxel& getVoxel(int x, int y, int z);
     const Voxel& getVoxel(int x, int y, int z) const;
+    float getVoxelDistanceValue(int x, int y, int z) const;
 
 //    Voxel& getVoxelCoordinatesForWorldCoordinates(const Vector3f& pos);
     Vector3i getVoxelCoordinatesForWorldCoordinates(const Vector3f& pos) const;
