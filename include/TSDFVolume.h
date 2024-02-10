@@ -5,6 +5,8 @@
 
 #include "PointCloud.h"
 
+#define TRUNCATION 0.1f
+
 struct Coord {
     int x;
     int y;
@@ -21,7 +23,7 @@ class TSDFVolume {
         float distance;
         float weight;
         Voxel()
-            : distance(1.0f), weight(0.0f) {}  // Initialize with default values
+            : distance(TRUNCATION), weight(0.0f) {}  // Initialize with default values
     };
 
     Voxel& getVoxel(int x, int y, int z);
@@ -37,10 +39,31 @@ class TSDFVolume {
 
     static TSDFVolume buildSphere();
 
+    int getWidth() const {
+        return width;
+    }
+
+    int getHeight() const {
+        return height;
+    }
+
+    int getDepth() const {
+        return depth;
+    }
+
+    int getPhysicalSize() const {
+        return size;
+    }
+
+    int getVoxelSize() const {
+        return voxelSize;
+    }
+
    private:
     std::vector<Voxel> voxels;
     int width, height, depth;
     const Vector3f offset;
+    const float size;
     const float voxelSize;
 
     inline int toLinearIndex(int x, int y, int z) const {

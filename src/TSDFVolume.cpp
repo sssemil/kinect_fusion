@@ -6,10 +6,8 @@
 #include "MarchingCubes.h"
 #include "Volume.h"
 
-#define TRUNCATION 2.f
-
 TSDFVolume::TSDFVolume(int width, int height, int depth, float voxelSize, Vector3f offset)
-    : width(width), height(height), depth(depth), voxelSize(voxelSize), offset(offset) {
+    : width(width), height(height), depth(depth), size(voxelSize * width), voxelSize(voxelSize), offset(offset) {
     voxels.resize(width * height * depth);
     std::fill(voxels.begin(), voxels.end(), Voxel());
 }
@@ -19,15 +17,19 @@ TSDFVolume::TSDFVolume(float size, int resolution, Vector3f offset)
 
 TSDFVolume TSDFVolume::buildSphere() {
     float radius = 4.f;
-    TSDFVolume tsdf(10, 10, Vector3f(0, 0, 0));
+    float size = 10;
+    int resolution = 256;
+    TSDFVolume tsdf(size, resolution, Vector3f(0, 0, 0));
+
+    float vsize = size / resolution;
 
     for (int x = 0; x < tsdf.width; x++) {
         for (int y = 0; y < tsdf.height; y++) {
             for (int z = 0; z < tsdf.depth; z++) {
                 auto s = sqrt(
-                             pow(x - tsdf.width / 2.f, 2) +
-                             pow(y - tsdf.height / 2.f, 2) +
-                             pow(z - tsdf.depth / 2.f, 2)
+                             pow((x - tsdf.width / 2.f) * vsize, 2) +
+                             pow((y - tsdf.height / 2.f) * vsize, 2) +
+                             pow((z - tsdf.depth / 2.f) * vsize, 2)
                                  );
                 auto d = s - radius;
                 auto val = fmin(TRUNCATION, fmax(-TRUNCATION, d));

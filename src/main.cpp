@@ -42,6 +42,7 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
         return -1;
     }
 
+
     // We store a first frame as a reference frame. All next frames are tracked
     // relatively to the first frame.
     sensor.processNextFrame();
@@ -63,15 +64,15 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
 
 
     // Define the dimensions and resolution of the TSDF volume
-    TSDFVolume tsdfVolume(size, resolution, offset);
+//    TSDFVolume tsdfVolume(size, resolution, offset);
     // TSDFVolume tsdfVolume(resolution, resolution, resolution, voxelSize);
 
     // Build TSDF using the first frame
-    tsdfVolume.integrate(target, currentCameraToWorld, 0.1f);
+//    tsdfVolume.integrate(target, currentCameraToWorld, 0.1f);
 
 
     // Building an SDF of a sphere manually
-//    TSDFVolume tsdfVolume = TSDFVolume::buildSphere();
+    TSDFVolume tsdfVolume = TSDFVolume::buildSphere();
     target = ray_marching(tsdfVolume, sensor, estimatedPoses.back());
 
     /*int i = 0;
@@ -119,7 +120,7 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
         i++;
     }*/
 
-    tsdfVolume.storeAsOff(filenameBaseOut);
+//    tsdfVolume.storeAsOff(filenameBaseOut);
 
     delete optimizer;
 
