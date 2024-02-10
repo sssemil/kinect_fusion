@@ -67,7 +67,7 @@ int run(const std::string& datasetPath, const std::string& filenameBaseOut,
     // TSDFVolume tsdfVolume(resolution, resolution, resolution, voxelSize);
 
     // Build TSDF using the first frame
-    tsdfVolume.integrate(target, currentCameraToWorld, 0.1f);
+    tsdfVolume.integrate(target, currentCameraToWorld);
     tsdfVolume.countNonThreshold();
 
     int i = 0;
@@ -101,7 +101,7 @@ int run(const std::string& datasetPath, const std::string& filenameBaseOut,
         estimatedPoses.push_back(currentCameraPose);
 
         Matrix4f cameraToWorld = currentCameraPose.inverse();
-        tsdfVolume.integrate(source, currentCameraToWorld, 0.1f);
+        tsdfVolume.integrate(source, currentCameraToWorld);
 
         // Replace target (reference frame) with source (current) frame
         if (relativeToPreviousFrame) {

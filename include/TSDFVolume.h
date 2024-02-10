@@ -34,8 +34,7 @@ class TSDFVolume {
     //    Voxel& getVoxelCoordinatesForWorldCoordinates(const Vector3f& pos);
     Vector3i getVoxelCoordinatesForWorldCoordinates(const Vector3f& pos) const;
 
-    void integrate(const PointCloud& pointCloud, const Eigen::Matrix4f& pose,
-                   float truncationDistance);
+    void integrate(const PointCloud &pointCloud, const Eigen::Matrix4f &pose);
 
     void storeAsOff(const std::string& filenameBaseOut,
                     unsigned int frameNumber);

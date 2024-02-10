@@ -111,9 +111,7 @@ Vector3i TSDFVolume::getVoxelCoordinatesForWorldCoordinates(
     return ((pos + half + offset) / voxelSize).cast<int>();
 }
 
-void TSDFVolume::integrate(const PointCloud& pointCloud,
-                           const Eigen::Matrix4f& pose,
-                           float truncationDistance) {
+void TSDFVolume::integrate(const PointCloud &pointCloud, const Eigen::Matrix4f &pose) {
     // Camera transformation
     const Eigen::Affine3f transform(pose);
 
