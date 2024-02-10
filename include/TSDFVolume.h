@@ -51,13 +51,16 @@ class TSDFVolume {
         return depth;
     }
 
-    int getPhysicalSize() const {
+    float getPhysicalSize() const {
         return size;
     }
 
-    int getVoxelSize() const {
+    float getVoxelSize() const {
         return voxelSize;
     }
+
+    void printSdf(const Vector3i& from, const Vector3i& to, std::ostream& out = std::cout);
+    void countNonThreshold();
 
    private:
     std::vector<Voxel> voxels;

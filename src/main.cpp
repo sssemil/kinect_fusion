@@ -64,15 +64,15 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
 
 
     // Define the dimensions and resolution of the TSDF volume
-//    TSDFVolume tsdfVolume(size, resolution, offset);
+    TSDFVolume tsdfVolume(size, resolution, offset);
     // TSDFVolume tsdfVolume(resolution, resolution, resolution, voxelSize);
 
     // Build TSDF using the first frame
-//    tsdfVolume.integrate(target, currentCameraToWorld, 0.1f);
-
+    tsdfVolume.integrate(target, currentCameraToWorld, 0.1f);
+    tsdfVolume.countNonThreshold();
 
     // Building an SDF of a sphere manually
-    TSDFVolume tsdfVolume = TSDFVolume::buildSphere();
+//    TSDFVolume tsdfVolume = TSDFVolume::buildSphere();
     target = ray_marching(tsdfVolume, sensor, estimatedPoses.back());
 
     /*int i = 0;
@@ -120,7 +120,7 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
         i++;
     }*/
 
-//    tsdfVolume.storeAsOff(filenameBaseOut);
+    tsdfVolume.storeAsOff(filenameBaseOut);
 
     delete optimizer;
 
@@ -166,17 +166,17 @@ int main(int argc, char *argv[]) {
             resolution = result["resolution"].as<int>();
         }
 
-        float dx = 2.f;  // meters
+        float dx = 0.f;  // meters
         if (result.count("dx")) {
             dx = result["dx"].as<float>();
         }
 
-        float dy = 2.f;  // meters
+        float dy = 0.f;  // meters
         if (result.count("dy")) {
             dy = result["dy"].as<float>();
         }
 
-        float dz = -0.5f;  // meters
+        float dz = -2.5f;  // meters
         if (result.count("dz")) {
             dz = result["dz"].as<float>();
         }
