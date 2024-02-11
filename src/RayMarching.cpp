@@ -7,35 +7,33 @@
 
 #define MIN_DEPTH 0.4f
 #define MAX_DEPTH 10.0f
-#define MAX_MARCHING_STEPS 255
+#define MAX_MARCHING_STEPS 65500
 
 #define EPSILON 0.001f
 
 float ray_marching_in_direction(const TSDFVolume& tsdf, const Vector3f& origin,
                                 const Vector3f& direction) {
     float depth = MIN_DEPTH;
-    float prev_dist = MINF;
-    float last_increment = MINF;
+    float prevSdfValue = MINF;
+    float stepLength = MINF;
 
-    Vector3f half(tsdf.getPhysicalSize() / 2, tsdf.getPhysicalSize() / 2, 0);
+//    Vector3f half(tsdf.getPhysicalSize() / 2, tsdf.getPhysicalSize() / 2, 0);
     for (int i = 0; i < MAX_MARCHING_STEPS; i++) {
-        Vector3f currentPos = origin + half + depth * direction;
-        Eigen::Vector3i target =
-            tsdf.getVoxelCoordinatesForWorldCoordinates(currentPos);
-        float dist =
-            tsdf.getVoxelDistanceValue(target[0], target[1], target[2]);
+        Vector3f currentPos = origin + depth * direction;
+        Eigen::Vector3i target = tsdf.getVoxelCoordinatesForWorldCoordinates(currentPos);
+        float sdfValue = tsdf.getVoxelDistanceValue(target[0], target[1], target[2]);
 
         // TODO: handle if backface encountered
 
-        if (prev_dist >= 0 && dist < 0) {
+        if (sdfValue < EPSILON || (prevSdfValue >= 0 && sdfValue < 0)) {
             // inside the surface
             return depth;  // - (last_increment * prev_dist) / (dist -
                            // prev_dist);
         }
         // Move along the view ray
-        depth += dist;
-        last_increment = dist;
-        prev_dist = dist;
+        stepLength = sdfValue / 20;
+        depth += stepLength;
+        prevSdfValue = sdfValue;
 
         if (depth >= MAX_DEPTH) {
             // Gone too far; give up
@@ -63,6 +61,8 @@ PointCloud ray_marching(const TSDFVolume& tsdf, VirtualSensor& sensor,
 
     std::vector<float> distances(width * height);
 
+    Vector3f origin = current_pose_estimate.block(0, 3, 3, 1);
+
 #pragma omp parallel for schedule(dynamic)
     for (int y = 0; y < height; y++) {
         {
@@ -79,14 +79,9 @@ PointCloud ray_marching(const TSDFVolume& tsdf, VirtualSensor& sensor,
         }
 
         for (int x = 0; x < width; x++) {
-            //            Vector3f origin = current_pose_estimate.block(0, 3, 3,
-            //            1);
-            Vector3f target =
-                /*current_pose_estimate.block(0, 0, 3, 3) **/ sensor
-                    .getDepthIntrinsics()
-                    .inverse() *
-                Vector3f(x, y, 1.0f);
+            Vector3f target = current_pose_estimate.block(0, 0, 3, 3) * sensor.getDepthIntrinsics().inverse() * Vector3f(x, y, 1.0f);
             Vector3f ray_direction = target;
+//            std::cout << "Ray direction: " << ray_direction << std::endl;
 
             // orthographic projection
             //            origin = Vector3f((tsdf.getWidth() - width / 2 + x) *
@@ -94,11 +89,12 @@ PointCloud ray_marching(const TSDFVolume& tsdf, VirtualSensor& sensor,
             //                              (tsdf.getHeight() - height / 2 + y)
             //                              * tsdf.getVoxelSize(), -5);
 
-            float dx = tsdf.getPhysicalSize() / width;
-            float dy = tsdf.getPhysicalSize() / height;
-            // left/right, top/bottom, near/far
-            Vector3f origin = Vector3f((x - width) * dx, (y - height) * dy, 5);
-            ray_direction = Vector3f(0, 0, -1);
+//            float dx = tsdf.getPhysicalSize() / width;
+//            float dy = tsdf.getPhysicalSize() / height;
+//            origin = Vector3f((x - width) * dx,
+//                              (y - height) * dy,
+//                              5);
+//            ray_direction = Vector3f(0, 0, -1);
 
             float dist = ray_marching_in_direction(tsdf, origin,
                                                    ray_direction.normalized());

@@ -207,8 +207,10 @@ void TSDFVolume::storeAsOff(const std::string& filenameBaseOut,
     //            Vector3d(0.5, 0.5, 0.5),
     //            width, height, depth, 1);
 
-    Vector3d half(width / 2.f, height / 2.f, depth / 2.f);
-    Volume vol(-half * voxelSize, half * voxelSize, width, height, depth, 1);
+    Vector3d half(size / 2.f, size / 2.f, size / 2.f);
+    Volume vol(-half - offset.cast<double>(),
+               half - offset.cast<double>(),
+               width, height, depth, 1);
 
 #pragma omp parallel for collapse(3)
     for (unsigned int x = 0; x < vol.getDimX(); x++) {

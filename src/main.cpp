@@ -60,6 +60,7 @@ int run(const std::string& datasetPath, const std::string& filenameBaseOut,
 
     // We store the estimated camera poses.
     std::vector<Matrix4f> estimatedPoses;
+    Matrix4f cumulativeCameraToWorld = Matrix4f::Identity();
     Matrix4f currentCameraToWorld = Matrix4f::Identity();
     estimatedPoses.emplace_back(currentCameraToWorld.inverse());
 
@@ -77,7 +78,7 @@ int run(const std::string& datasetPath, const std::string& filenameBaseOut,
         // Log every 20th frame or if we are about to stop
         if (i % 20 == 0 || stop_reached) {
             auto ray_target = ray_marching(
-                tsdfVolume, sensor, estimatedPoses.back(), filenameBaseOut, i);
+                tsdfVolume, sensor, cumulativeCameraToWorld, filenameBaseOut, i);
             tsdfVolume.storeAsOff(filenameBaseOut, i);
         }
         if (stop_reached) {
@@ -101,10 +102,10 @@ int run(const std::string& datasetPath, const std::string& filenameBaseOut,
         // TODO: Track camera pose and then get the target image from the TSDF
         // from that pose.
         // TODO: Replace target with a raycasted image from the TSDF volume.
-        // PointCloud target = ray_marching(tsdfVolume, sensor,
-        // estimatedPoses.back());
 
+        currentCameraToWorld.setIdentity();
         optimizer->estimatePose(source, target, currentCameraToWorld);
+//        optimizer->estimatePose(source, target, cumulativeCameraPose);
 
         // Invert the transformation matrix to get the current camera pose.
         Matrix4f currentCameraPose = currentCameraToWorld.inverse();
@@ -112,13 +113,12 @@ int run(const std::string& datasetPath, const std::string& filenameBaseOut,
                   << currentCameraPose << std::endl;
         estimatedPoses.push_back(currentCameraPose);
 
-        Matrix4f cameraToWorld = currentCameraPose.inverse();
-        tsdfVolume.integrate(source, currentCameraToWorld);
+        cumulativeCameraToWorld = cumulativeCameraToWorld * currentCameraToWorld;
+        tsdfVolume.integrate(source, cumulativeCameraToWorld);
 
         // Replace target (reference frame) with source (current) frame
-        if (relativeToPreviousFrame) {
-            target = source;
-        }
+        target = source;
+//        ray_marching(tsdfVolume, sensor, cumulativeCameraToWorld);
 
         // if (i % 10 == 0) {
         //     if (logMesh(sensor, currentCameraPose, filenameBaseOut) !=
