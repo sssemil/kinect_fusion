@@ -94,8 +94,8 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
         // TODO: Track camera pose and then get the target image from the TSDF
         // from that pose.
         // TODO: Replace target with a raycasted image from the TSDF volume.
-        ray_marching(tsdfVolume, sensor, currentCameraToWorld);
 
+        currentCameraToWorld.setIdentity();
         optimizer->estimatePose(source, target, currentCameraToWorld);
 //        optimizer->estimatePose(source, target, cumulativeCameraPose);
 
@@ -105,11 +105,12 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
                   << currentCameraPose << std::endl;
         estimatedPoses.push_back(currentCameraPose);
 
-        cumulativeCameraToWorld = currentCameraToWorld * cumulativeCameraToWorld;
-        tsdfVolume.integrate(source, currentCameraToWorld, 0.1f);
+        cumulativeCameraToWorld = cumulativeCameraToWorld * currentCameraToWorld;
+        tsdfVolume.integrate(source, cumulativeCameraToWorld, 0.1f);
 
         // Replace target (reference frame) with source (current) frame
-//        target = source;
+        target = source;
+        ray_marching(tsdfVolume, sensor, cumulativeCameraToWorld);
 
         // if (i % 10 == 0) {
         //     if (logMesh(sensor, currentCameraPose, filenameBaseOut) !=
