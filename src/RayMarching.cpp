@@ -46,28 +46,41 @@ float ray_marching_in_direction(const TSDFVolume& tsdf, const Vector3f& origin,
 }
 
 PointCloud ray_marching(const TSDFVolume& tsdf, VirtualSensor& sensor,
-                        const Matrix4f& current_pose_estimate) {
+                        const Matrix4f& current_pose_estimate,
+                        const std::string& filenameBaseOut,
+                        unsigned int frameNumber) {
+    auto start = std::chrono::high_resolution_clock::now();
+
     int width = sensor.getDepthImageWidth();
     int height = sensor.getDepthImageHeight();
 
-    Vector3f orr(0, 0, -5.f);
-    Vector3f hurka1 =
-        sensor.getDepthIntrinsics().inverse() * Vector3f(0, 0, 1.0f);
+    Vector3f orr(0, 0, 5.f);
     Vector3f hurka =
         sensor.getDepthIntrinsics().inverse() * Vector3f(320, 240, 1.0f);
-    Vector3f hurka2 =
-        sensor.getDepthIntrinsics().inverse() * Vector3f(640, 480, 1.0f);
 
     float d = ray_marching_in_direction(tsdf, orr, hurka.normalized());
     std::cout << d;
 
     std::vector<float> distances(width * height);
 
+#pragma omp parallel for schedule(dynamic)
     for (int y = 0; y < height; y++) {
+        {
+            auto intermittent_end = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> elapsed = intermittent_end - start;
+            double progress = static_cast<double>(y) / height;
+            double totalExpectedTime = elapsed.count() / progress;
+            double expectedRemainingTime = totalExpectedTime - elapsed.count();
+            printf(
+                "\rRay marching slice %d of %d (%0.2f seconds) [Expected "
+                "remaining time: %0.2f seconds]",
+                y, height, elapsed.count(), expectedRemainingTime);
+            fflush(stdout);
+        }
+
         for (int x = 0; x < width; x++) {
             //            Vector3f origin = current_pose_estimate.block(0, 3, 3,
             //            1);
-            Vector3f origin(-2, -2, -2.f);
             Vector3f target =
                 /*current_pose_estimate.block(0, 0, 3, 3) **/ sensor
                     .getDepthIntrinsics()
@@ -83,7 +96,8 @@ PointCloud ray_marching(const TSDFVolume& tsdf, VirtualSensor& sensor,
 
             float dx = tsdf.getPhysicalSize() / width;
             float dy = tsdf.getPhysicalSize() / height;
-            origin = Vector3f((x - width) * dx, (y - height) * dy, 5);
+            // left/right, top/bottom, near/far
+            Vector3f origin = Vector3f((x - width) * dx, (y - height) * dy, 5);
             ray_direction = Vector3f(0, 0, -1);
 
             float dist = ray_marching_in_direction(tsdf, origin,
@@ -115,9 +129,18 @@ PointCloud ray_marching(const TSDFVolume& tsdf, VirtualSensor& sensor,
 
     FreeImage img(width, height, 1);
     img.data = distances_copy.data();
-    img.SaveImageToFile("output.png", true);
+    // append frame number to filename
+    std::stringstream ss;
+    ss << filenameBaseOut << "ray_" << frameNumber << ".png";
+    std::cout << "Saving depth map to " << ss.str() << std::endl;
+    img.SaveImageToFile(ss.str(), true);
     img.data = nullptr;
     std::cout << "Depth map rendered." << std::endl;
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "Ray marching took " << elapsed.count() << " seconds."
+              << std::endl;
 
     return PointCloud{distances.data(),
                       sensor.getDepthIntrinsics(),

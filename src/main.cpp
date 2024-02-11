@@ -4,6 +4,7 @@
 #include "Eigen.h"
 #include "ICPOptimizer.h"
 #include "PointCloud.h"
+#include "RayMarching.h"
 #include "SimpleMesh.h"
 #include "TSDFVolume.h"
 #include "VirtualSensor.h"
@@ -68,11 +69,22 @@ int run(const std::string& datasetPath, const std::string& filenameBaseOut,
 
     // Build TSDF using the first frame
     tsdfVolume.integrate(target, currentCameraToWorld);
-    tsdfVolume.countNonThreshold();
 
-    int i = 0;
-    while (sensor.processNextFrame(applyBilateralEnabled) &&
-           i < stopAfterFrame) {
+    int i = 1;
+    while (true) {
+        bool stop_reached = !(sensor.processNextFrame(applyBilateralEnabled) &&
+                              i < stopAfterFrame);
+        // Log every 20th frame or if we are about to stop
+        if (i % 20 == 0 || stop_reached) {
+            auto ray_target = ray_marching(
+                tsdfVolume, sensor, estimatedPoses.back(), filenameBaseOut, i);
+            tsdfVolume.storeAsOff(filenameBaseOut, i);
+        }
+        if (stop_reached) {
+            break;
+        }
+        i++;
+
         Matrix3f depthIntrinsics = sensor.getDepthIntrinsics();
         Matrix4f depthExtrinsics = sensor.getDepthExtrinsics();
 
@@ -116,16 +128,10 @@ int run(const std::string& datasetPath, const std::string& filenameBaseOut,
         // }
 
         i++;
-
-        if (i % 20 == 0) {
-            tsdfVolume.storeAsOff(filenameBaseOut, i);
-        }
     }
 
     // Building an SDF of a sphere manually
     // TSDFVolume tsdfVolume = TSDFVolume::buildSphere();
-
-    tsdfVolume.storeAsOff(filenameBaseOut, i);
 
     delete optimizer;
 

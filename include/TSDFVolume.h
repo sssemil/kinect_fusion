@@ -5,7 +5,7 @@
 
 #include "PointCloud.h"
 
-#define TRUNCATION 0.1f
+#define TRUNCATION 0.01f
 
 struct Coord {
     int x;
@@ -34,7 +34,7 @@ class TSDFVolume {
     //    Voxel& getVoxelCoordinatesForWorldCoordinates(const Vector3f& pos);
     Vector3i getVoxelCoordinatesForWorldCoordinates(const Vector3f& pos) const;
 
-    void integrate(const PointCloud &pointCloud, const Eigen::Matrix4f &pose);
+    void integrate(const PointCloud& pointCloud, const Eigen::Matrix4f& pose);
 
     void storeAsOff(const std::string& filenameBaseOut,
                     unsigned int frameNumber);
@@ -72,4 +72,6 @@ class TSDFVolume {
         int z = index / (width * height);
         return Coord{.x = x, .y = y, .z = z};
     }
+
+    float getVoxelWeightValue(int x, int y, int z) const;
 };

@@ -105,54 +105,94 @@ float TSDFVolume::getVoxelDistanceValue(int x, int y, int z) const {
     return voxels[toLinearIndex(x, y, z)].distance;
 }
 
+float TSDFVolume::getVoxelWeightValue(int x, int y, int z) const {
+    if (x < 0 || x >= width || y < 0 || y >= height || z < 0 || z >= depth) {
+        return 0.0f;
+    }
+    return voxels[toLinearIndex(x, y, z)].weight;
+}
+
 Vector3i TSDFVolume::getVoxelCoordinatesForWorldCoordinates(
     const Vector3f& pos) const {
     Vector3f half(size / 2.f, size / 2.f, size / 2.f);
     return ((pos + half + offset) / voxelSize).cast<int>();
 }
 
-void TSDFVolume::integrate(const PointCloud &pointCloud, const Eigen::Matrix4f &pose) {
+void TSDFVolume::integrate(const PointCloud& pointCloud,
+                           const Eigen::Matrix4f& pose) {
     auto start = std::chrono::high_resolution_clock::now();
 
-    // Camera transformation
     const Eigen::Affine3f transform(pose);
+    const std::vector<Eigen::Vector3f>& points = pointCloud.getPoints();
+    const std::vector<Eigen::Vector3f>& normals = pointCloud.getNormals();
 
-    // Iterate over each point in the PointCloud
-    const auto& points = pointCloud.getPoints();
-    const auto& normals = pointCloud.getNormals();
+    int range = static_cast<int>(std::ceil(TRUNCATION / voxelSize));
+    std::cout << "Integration range: " << range << std::endl;
 
+#pragma omp parallel for schedule(dynamic)
     for (size_t i = 0; i < points.size(); ++i) {
-        Eigen::Vector3f point = transform * points[i];
-        Eigen::Vector3f normal = transform.rotation() * normals[i];
+        if (i % 100 == 0) {
+            auto intermittent_end = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> elapsed = intermittent_end - start;
+            double progress = static_cast<double>(i) / points.size();
+            double totalExpectedTime = elapsed.count() / progress;
+            double expectedRemainingTime = totalExpectedTime - elapsed.count();
+            printf(
+                "\rIntegrating point %zu of %zu (%0.2f seconds) [Expected "
+                "remaining time: %0.2f seconds]",
+                i, points.size(), elapsed.count(), expectedRemainingTime);
+            fflush(stdout);
+        }
 
-        // Transform point to TSDF grid coordinates
-        // TODO: find the exact relationship between voxelSize and the SDF
-        // dimensions
-        Vector3i voxelCoord = getVoxelCoordinatesForWorldCoordinates(point);
+        Eigen::Vector3f globalPoint =
+            transform * points[i];  // Apply transformation
+        Eigen::Vector3f globalNormal =
+            transform.rotation() *
+            normals[i];  // Transform normals without translation
 
-        // Update voxel if within TSDF volume bounds
-        if (voxelCoord[0] >= 0 && voxelCoord[0] < width && voxelCoord[1] >= 0 &&
-            voxelCoord[1] < height && voxelCoord[2] >= 0 &&
-            voxelCoord[2] < depth) {
-            int index =
-                    toLinearIndex(voxelCoord[0], voxelCoord[1], voxelCoord[2]);
-            Voxel &voxel = voxels[index];
+        Eigen::Vector3i voxelCoords =
+            getVoxelCoordinatesForWorldCoordinates(globalPoint);
 
-            // Compute signed distance and update voxel
-            float sdf = normal.dot(point);
-            sdf = std::min(std::max(sdf, -TRUNCATION), TRUNCATION);
+        // Iterate over the neighborhood of voxels around the point within the
+        // truncation distance
+        for (int dz = -range; dz <= range; dz++) {
+            for (int dy = -range; dy <= range; dy++) {
+                for (int dx = -range; dx <= range; dx++) {
+                    int nx = voxelCoords.x() + dx;
+                    int ny = voxelCoords.y() + dy;
+                    int nz = voxelCoords.z() + dz;
 
-            // Weighted average update
-            float wNew = 1.0;  // Example: constant weight
-            voxel.distance = (voxel.distance * voxel.weight + sdf * wNew) /
-                             (voxel.weight + wNew);
-            voxel.weight += wNew;
+                    if (nx >= 0 && nx < width && ny >= 0 && ny < height &&
+                        nz >= 0 && nz < depth) {
+                        Eigen::Vector3f voxelCenter =
+                            offset +
+                            Eigen::Vector3f(nx + 0.5f, ny + 0.5f, nz + 0.5f) *
+                                voxelSize;
+                        float distance = (globalPoint - voxelCenter)
+                                             .dot(globalNormal.normalized());
+                        distance = std::min(std::max(distance, -TRUNCATION),
+                                            TRUNCATION);
+
+                        Voxel& voxel = getVoxel(nx, ny, nz);
+                        // Adjust the weight according to the distance from the
+                        // point
+                        float weight =
+                            std::exp(-distance * distance / (0.03f * 0.03f));
+                        voxel.distance = (voxel.distance * voxel.weight +
+                                          distance * weight) /
+                                         (voxel.weight + weight);
+                        voxel.weight += weight;
+                    }
+                }
+            }
         }
     }
+    printf("\n");
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
-    std::cout << "Integration took " << elapsed.count() << " seconds." << std::endl;
+    std::cout << "Integration took " << elapsed.count() << " seconds."
+              << std::endl;
 }
 
 void TSDFVolume::storeAsOff(const std::string& filenameBaseOut,
@@ -182,25 +222,28 @@ void TSDFVolume::storeAsOff(const std::string& filenameBaseOut,
 
     // extract the zero iso-surface using marching cubes
 
-    std::vector<SimpleMesh> meshes(omp_get_max_threads()); // Vector of meshes, one per thread
+    std::vector<SimpleMesh> meshes(
+        omp_get_max_threads());  // Vector of meshes, one per thread
 
     // Count duration of marching cubes
     auto start = std::chrono::high_resolution_clock::now();
 
 #pragma omp parallel for collapse(2) schedule(dynamic)
     for (unsigned int x = 0; x < vol.getDimX() - 1; x++) {
-//        auto intermittent_end = std::chrono::high_resolution_clock::now();
-//        std::chrono::duration<double> elapsed = intermittent_end - start;
-//        auto it_per_sec = x / elapsed.count();
-//        printf(
-//            "\rMarching Cubes on slice %d of %d (%0.2f seconds) [%0.2f it/s]",
-//            x, vol.getDimX(), elapsed.count(), it_per_sec);
-//        fflush(stdout);
+        //        auto intermittent_end =
+        //        std::chrono::high_resolution_clock::now();
+        //        std::chrono::duration<double> elapsed = intermittent_end -
+        //        start; auto it_per_sec = x / elapsed.count(); printf(
+        //            "\rMarching Cubes on slice %d of %d (%0.2f seconds) [%0.2f
+        //            it/s]", x, vol.getDimX(), elapsed.count(), it_per_sec);
+        //        fflush(stdout);
 
         for (unsigned int y = 0; y < vol.getDimY() - 1; y++) {
             for (unsigned int z = 0; z < vol.getDimZ() - 1; z++) {
-                int thread_id = omp_get_thread_num(); // Get the current thread's ID
-                ProcessVolumeCell(&vol, x, y, z, 0.00f, &meshes[thread_id]); // Use thread-local mesh
+                int thread_id =
+                    omp_get_thread_num();  // Get the current thread's ID
+                ProcessVolumeCell(&vol, x, y, z, 0.00f,
+                                  &meshes[thread_id]);  // Use thread-local mesh
             }
         }
     }
@@ -209,13 +252,16 @@ void TSDFVolume::storeAsOff(const std::string& filenameBaseOut,
     // Combine all the meshes into one
     SimpleMesh finalMesh;
     for (const auto& mesh : meshes) {
-        finalMesh = SimpleMesh::joinMeshes(finalMesh, mesh, Matrix4f::Identity());
+        finalMesh =
+            SimpleMesh::joinMeshes(finalMesh, mesh, Matrix4f::Identity());
     }
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
-    std::cout << "Marching Cubes took " << elapsed.count() << " seconds." << std::endl;
-    std::cout << "Processed " << vol.getDimX() << " x-slices in total." << std::endl;
+    std::cout << "Marching Cubes took " << elapsed.count() << " seconds."
+              << std::endl;
+    std::cout << "Processed " << vol.getDimX() << " x-slices in total."
+              << std::endl;
     auto it_per_sec = vol.getDimX() / elapsed.count();
     std::cout << "That's " << it_per_sec << " it/s" << std::endl;
 
