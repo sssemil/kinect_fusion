@@ -14,6 +14,8 @@
 #include "ProcrustesAligner.h"
 #include "SimpleMesh.h"
 
+#define LOGGING false
+
 /**
  * Helper methods for writing Ceres cost functions.
  */
@@ -321,10 +323,12 @@ class CeresICPOptimizer : public ICPOptimizer {
         poseIncrement.setZero();
 
         for (int i = 0; i < m_nIterations; ++i) {
-            // Compute the matches.
+#if LOGGING
             std::cout << "Matching points ..." << std::endl;
             clock_t begin = clock();
+#endif
 
+            // Compute the matches.
             auto transformedPoints =
                 transformPoints(source.getPoints(), estimatedPose);
             auto transformedNormals =
@@ -335,10 +339,12 @@ class CeresICPOptimizer : public ICPOptimizer {
             pruneCorrespondences(transformedNormals, target.getNormals(),
                                  matches);
 
+#if LOGGING
             clock_t end = clock();
             double elapsedSecs = double(end - begin) / CLOCKS_PER_SEC;
-            std::cout << "Completed in " << elapsedSecs << " seconds."
-                      << std::endl;
+            if (logging) std::cout << "Completed in " << elapsedSecs << " seconds."
+                                   << std::endl;
+#endif
 
             // Prepare point-to-point and point-to-plane constraints.
             ceres::Problem problem;
@@ -348,13 +354,18 @@ class CeresICPOptimizer : public ICPOptimizer {
 
             // Configure options for the solver.
             ceres::Solver::Options options;
+#if !LOGGING
+            options.logging_type = ceres::SILENT;
+#endif
             configureSolver(options);
 
             // Run the solver (for one iteration).
             ceres::Solver::Summary summary;
             ceres::Solve(options, &problem, &summary);
+#if LOGGING
             std::cout << summary.BriefReport() << std::endl;
             // std::cout << summary.FullReport() << std::endl;
+#endif
 
             // Update the current pose estimate (we always update the pose from
             // the left, using left-increment notation).
@@ -365,7 +376,9 @@ class CeresICPOptimizer : public ICPOptimizer {
                 estimatedPose;
             poseIncrement.setZero();
 
+#if LOGGING
             std::cout << "Optimization iteration done." << std::endl;
+#endif
         }
 
         // Store result
