@@ -112,6 +112,8 @@ Vector3i TSDFVolume::getVoxelCoordinatesForWorldCoordinates(
 }
 
 void TSDFVolume::integrate(const PointCloud &pointCloud, const Eigen::Matrix4f &pose) {
+    auto start = std::chrono::high_resolution_clock::now();
+
     // Camera transformation
     const Eigen::Affine3f transform(pose);
 
@@ -133,8 +135,8 @@ void TSDFVolume::integrate(const PointCloud &pointCloud, const Eigen::Matrix4f &
             voxelCoord[1] < height && voxelCoord[2] >= 0 &&
             voxelCoord[2] < depth) {
             int index =
-                toLinearIndex(voxelCoord[0], voxelCoord[1], voxelCoord[2]);
-            Voxel& voxel = voxels[index];
+                    toLinearIndex(voxelCoord[0], voxelCoord[1], voxelCoord[2]);
+            Voxel &voxel = voxels[index];
 
             // Compute signed distance and update voxel
             float sdf = normal.dot(point);
@@ -147,6 +149,10 @@ void TSDFVolume::integrate(const PointCloud &pointCloud, const Eigen::Matrix4f &
             voxel.weight += wNew;
         }
     }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "Integration took " << elapsed.count() << " seconds." << std::endl;
 }
 
 void TSDFVolume::storeAsOff(const std::string& filenameBaseOut,
