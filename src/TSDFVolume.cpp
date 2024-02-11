@@ -138,8 +138,7 @@ void TSDFVolume::integrate(const PointCloud& pointCloud,
 
             // Compute signed distance and update voxel
             float sdf = normal.dot(point);
-            sdf = std::min(std::max(sdf, -TRUNCATION),
-                           TRUNCATION);
+            sdf = std::min(std::max(sdf, -TRUNCATION), TRUNCATION);
 
             // Weighted average update
             float wNew = 1.0;  // Example: constant weight
@@ -161,9 +160,9 @@ void TSDFVolume::storeAsOff(const std::string& filenameBaseOut) {
 //               Vector3d(0.5, 0.5, 0.5),
 //               width, height, depth, 1);
 
-    Vector3d half(width / 2.f, height / 2.f, depth / 2.f);
-    Volume vol(-half * voxelSize,
-               half * voxelSize,
+    Vector3d half(size / 2.f, size / 2.f, size / 2.f);
+    Volume vol(-half - offset.cast<double>(),
+               half - offset.cast<double>(),
                width, height, depth, 1);
     for (unsigned int x = 0; x < vol.getDimX(); x++) {
         for (unsigned int y = 0; y < vol.getDimY(); y++) {
