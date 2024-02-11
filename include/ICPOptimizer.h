@@ -239,6 +239,7 @@ class ICPOptimizer {
     unsigned m_nIterations;
     std::unique_ptr<NearestNeighborSearch> m_nearestNeighborSearch;
 
+//TODO Use CUDA version
     std::vector<Vector3f> transformPoints(
         const std::vector<Vector3f>& sourcePoints, const Matrix4f& pose) {
         std::vector<Vector3f> transformedPoints;
@@ -254,6 +255,7 @@ class ICPOptimizer {
         return transformedPoints;
     }
 
+//TODO Use CUDA version
     std::vector<Vector3f> transformNormals(
         const std::vector<Vector3f>& sourceNormals, const Matrix4f& pose) {
         std::vector<Vector3f> transformedNormals;
@@ -269,6 +271,8 @@ class ICPOptimizer {
         return transformedNormals;
     }
 
+
+//TODO Use CUDA version
     void pruneCorrespondences(const std::vector<Vector3f>& sourceNormals,
                               const std::vector<Vector3f>& targetNormals,
                               std::vector<Match>& matches) {
@@ -392,6 +396,7 @@ class CeresICPOptimizer : public ICPOptimizer {
                             ceres::Problem& problem) const {
         const unsigned nPoints = sourcePoints.size();
 
+#pragma omp parallel for
         for (unsigned i = 0; i < nPoints; ++i) {
             const auto match = matches[i];
             if (match.idx >= 0) {
