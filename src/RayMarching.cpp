@@ -99,7 +99,7 @@ PointCloud ray_marching(const TSDFVolume &tsdf, VirtualSensor &sensor, const Mat
 
     FreeImage img(width, height, 1);
     img.data = distances_copy.data();
-    img.SaveImageToFile("output.png");
+    img.SaveImageToFile("output_" + std::to_string(sensor.getCurrentFrameCnt()) + ".png");
     img.data = nullptr;
     std::cout << "Depth map rendered." << std::endl;
 

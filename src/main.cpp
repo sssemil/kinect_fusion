@@ -59,7 +59,7 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
 
     // We store the estimated camera poses.
     std::vector<Matrix4f> estimatedPoses;
-    Matrix4f cumulativeCameraPose = Matrix4f::Identity();
+    Matrix4f cumulativeCameraToWorld = Matrix4f::Identity();
     Matrix4f currentCameraToWorld = Matrix4f::Identity();
     estimatedPoses.emplace_back(currentCameraToWorld.inverse());
 
@@ -94,7 +94,7 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
         // TODO: Track camera pose and then get the target image from the TSDF
         // from that pose.
         // TODO: Replace target with a raycasted image from the TSDF volume.
-//        target = ray_marching(tsdfVolume, sensor, cumulativeCameraPose);
+        ray_marching(tsdfVolume, sensor, currentCameraToWorld);
 
         optimizer->estimatePose(source, target, currentCameraToWorld);
 //        optimizer->estimatePose(source, target, cumulativeCameraPose);
@@ -105,7 +105,7 @@ int run(const std::string &datasetPath, const std::string &filenameBaseOut,
                   << currentCameraPose << std::endl;
         estimatedPoses.push_back(currentCameraPose);
 
-        Matrix4f cameraToWorld = currentCameraPose.inverse();
+        cumulativeCameraToWorld = currentCameraToWorld * cumulativeCameraToWorld;
         tsdfVolume.integrate(source, currentCameraToWorld, 0.1f);
 
         // Replace target (reference frame) with source (current) frame
