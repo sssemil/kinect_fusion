@@ -3,6 +3,18 @@
 Project GitHub repository: https://github.com/sssemil/kinect_fusion
 
 ## Dependencies
+Install Eigen
+```bash
+sudo apt install libeigen3-dev
+```
+For installing Ceres you can follow this page http://ceres-solver.org/installation.html
+
+For installing CUDA you can follow this page For instlling Ceres you can follow this page http://ceres-solver.org/installation.html
+
+Install Flann
+```bash
+sudo apt-get install libflann-dev
+```
 
 ### CxxOpts
 
@@ -13,7 +25,7 @@ git clone https://github.com/jarro2783/cxxopts ../Libs/cxxopts
 # Running
 
 Store the project inside the 3DMS exercise folder, run the following commands from the project root:
-    
+
 ```bash
 cd cmake-build-release
 cmake -DCMAKE_BUILD_TYPE=Release ..
