@@ -34,7 +34,7 @@ int logMesh(VirtualSensor& sensor, const Matrix4f& currentCameraPose,
 int run(const std::string& datasetPath, const std::string& filenameBaseOut,
         float size, int resolution, Vector3f offset,
         bool relativeToPreviousFrame, unsigned int stopAfterFrame,
-        bool applyBilateralEnabled) {
+        bool applyBilateralEnabled, bool relativeToRay) {
     // load video
     std::cout << "Initialize virtual sensor..." << std::endl;
     VirtualSensor sensor;
@@ -76,8 +76,6 @@ int run(const std::string& datasetPath, const std::string& filenameBaseOut,
                               i < stopAfterFrame);
         // Log every 20th frame or if we are about to stop
         if (i % 20 == 0 || stop_reached) {
-            auto ray_target = ray_marching(
-                tsdfVolume, sensor, estimatedPoses.back(), filenameBaseOut, i);
             tsdfVolume.storeAsOff(filenameBaseOut, i);
         }
         if (stop_reached) {
@@ -115,9 +113,15 @@ int run(const std::string& datasetPath, const std::string& filenameBaseOut,
         Matrix4f cameraToWorld = currentCameraPose.inverse();
         tsdfVolume.integrate(source, currentCameraToWorld);
 
+        auto ray_target =
+            ray_marching(tsdfVolume, sensor, estimatedPoses.back(),
+                         filenameBaseOut, i, true);
+
         // Replace target (reference frame) with source (current) frame
         if (relativeToPreviousFrame) {
             target = source;
+        } else if (relativeToRay) {
+            target = ray_target;
         }
 
         // if (i % 10 == 0) {
@@ -153,6 +157,8 @@ int main(int argc, char* argv[]) {
             "y,dy", "Y-offset", cxxopts::value<float>())(
             "z,dz", "Z-offset", cxxopts::value<float>())(
             "f,relativeToPreviousFrame", "Use relative frame as first frame",
+            cxxopts::value<bool>())(
+            "m,relativeToRay", "Use relative frame as ray march PC",
             cxxopts::value<bool>())("h,help", "Print help");
 
         auto result = options.parse(argc, argv);
@@ -213,6 +219,11 @@ int main(int argc, char* argv[]) {
                 result["relativeToPreviousFrame"].as<bool>();
         }
 
+        bool relativeToRay = false;
+        if (result.count("relativeToRay")) {
+            relativeToPreviousFrame = result["relativeToRay"].as<bool>();
+        }
+
         std::cout << "Dataset Path: " << datasetPath << std::endl;
         std::cout << "Base Output Filename: " << filenameBaseOut << std::endl;
         std::cout << "Size: " << size << std::endl;
@@ -221,12 +232,13 @@ int main(int argc, char* argv[]) {
         std::cout << "Relative to Previous Frame: " << relativeToPreviousFrame
                   << std::endl;
         std::cout << "Stop After Frame: " << stopAfterFrame << std::endl;
+        std::cout << "Ray cast relative to ray: " << relativeToRay << std::endl;
         std::cout << "Apply Bilateral Filter: " << applyBilateralEnabled
                   << std::endl;
 
         return run(datasetPath, filenameBaseOut, size, resolution,
                    Vector3f(dx, dy, dz), relativeToPreviousFrame,
-                   stopAfterFrame, applyBilateralEnabled);
+                   stopAfterFrame, applyBilateralEnabled, relativeToRay);
     } catch (cxxopts::exceptions::option_has_no_value& ex) {
         std::cerr << ex.what() << "\n";
         return 1;
