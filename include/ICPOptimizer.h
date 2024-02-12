@@ -396,7 +396,6 @@ class CeresICPOptimizer : public ICPOptimizer {
                             ceres::Problem& problem) const {
         const unsigned nPoints = sourcePoints.size();
 
-#pragma omp parallel for
         for (unsigned i = 0; i < nPoints; ++i) {
             const auto match = matches[i];
             if (match.idx >= 0) {
